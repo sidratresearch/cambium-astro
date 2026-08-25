@@ -1,0 +1,8 @@
+div.cambium-PreviewFITS {
+  a.download-link {
+    display: inline-flex;
+    svg {
+      width: 1rem;
+    }
+  }
+}
