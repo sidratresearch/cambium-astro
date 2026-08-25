@@ -141,7 +141,11 @@ class PreviewFITS(Stage):
 
         image_path = tree.abs_leaf_path(image_uuid)
 
-        plt.imsave(image_path, fits_data)
+        style_path = Path(__file__).parent / "root.mplstyle/root.mplstyle"
+
+        plt.style.use(style_path)
+        plt.imshow(fits_data)
+        plt.savefig(image_path)
 
 
 def get_md_content(
@@ -154,6 +158,7 @@ def get_md_content(
     """Get the content for the Markdown preview page."""
     fits_path = tree.leaves["initial_path"][md_uuid]
     download_filename = tree.leaves["initial_path"][fits_uuid].name
+    fits_header = fits.getheader(fits_path)
 
     jinja_environment = Environment(
         loader=FileSystemLoader(tree.config.template_directories),
@@ -166,8 +171,9 @@ def get_md_content(
 
     return template.render(
         download_filename=download_filename,
-        fits_filesize=fits_path.stat().st_size,
         img_src="./" + fits_path.with_suffix(image_suffix).name,
+        fits_filesize=fits_path.stat().st_size,
+        fits_header=fits_header,
         cambium_wrap=WrappedBlocksMixin.wrap_anything,
         **jinja_variables,
     )

@@ -1,4 +1,11 @@
 div.cambium-PreviewFITS {
+  display: flex;
+  gap: 2rem;
+
+  div.cambium-img-holder {
+    margin-top: 0;
+  }
+
   a.download-link {
     display: inline-flex;
     svg {
