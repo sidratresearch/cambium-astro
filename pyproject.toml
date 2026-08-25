@@ -1,0 +1,39 @@
+[project]
+name = "cambium-astro"
+description = "Astronomy-related stages for Cambium"
+authors = [
+  { name = "Sidrat Research", email = "info@sidratresearch.com" },
+  { name = "Mubdi Rahman", email = "mubdi@sidratresearch.com" },
+  { name = "Tai Withers", email = "tai@sidratresearch.com" },
+  { name = "Hansen Jiang", email = "hansen@sidratresearch.com" },
+  { name = "Jennifer Scora", email = "jscora@sidratresearch.com" },
+]
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+dependencies = ["cambium>=0.6.0", "astropy (>=8.0.1,<9.0.0)", "matplotlib (>=3.11.1,<4.0.0)"]
+dynamic = ["version"]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+scripts.cambium-astro = "cambium_astro.cli:app"
+
+[dependency-groups]
+dev = [
+  "black>=26.3.1,<27",
+  "ipykernel>=7.2,<8",
+  "isort>=8.0.1,<9",
+  "pre-commit>=4.6,<5",
+  "pytest>=9.0.3,<10",
+  "tox>=4.53.1,<5",
+]
+
+[tool.poetry]
+version = "0.0.0"
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
+[tool.poetry-dynamic-versioning]
+enable = true
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"

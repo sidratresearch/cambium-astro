@@ -1,0 +1,44 @@
+default_install_hook_types: [pre-commit, pre-push, commit-msg]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+
+  # black
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 26.5.1
+    hooks:
+      - id: black
+
+  # isort
+  - repo: https://github.com/pycqa/isort
+    rev: 9.0.0b1
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  # format pyproject
+  - repo: https://github.com/tox-dev/pyproject-fmt
+    rev: "v2.26.0"
+    hooks:
+      - id: pyproject-fmt
+
+  # run tests
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        types: [python]
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
