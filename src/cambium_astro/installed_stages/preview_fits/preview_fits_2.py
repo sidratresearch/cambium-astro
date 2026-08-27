@@ -22,7 +22,7 @@ class PreviewFITSConfig(StageConfig):
     enable_paths: list[str] = ["*.fits", "*.fit"]
     disable_paths: list[str] = []
     image_filetype: str = "png"
-    max_preview_rows: PositiveInt | None = 25
+    max_preview_rows: PositiveInt | None = 10
 
 
 class UUIDMapping(TypedDict):

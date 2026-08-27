@@ -341,7 +341,7 @@
 ## Following are default face and edge colors, default tick sizes,
 ## default font sizes for tick labels, and so on.  See
 ## https://matplotlib.org/stable/api/axes_api.html#module-matplotlib.axes
-# axes.facecolor: "#f9f9f9" # axes background color
+# axes.facecolor:    white   # axes background color
 #axes.edgecolor:     black   # axes edge color
 #axes.linewidth:     0.8     # edge line width
 #axes.grid:          False   # display grid or not
@@ -683,8 +683,7 @@ image.origin: lower # {lower, upper}
 #savefig.dpi:       figure      # figure dots per inch or 'figure'
 #savefig.facecolor: auto        # figure face color when saving
 #savefig.edgecolor: auto        # figure edge color when saving
-#savefig.format:    png         # {png, ps, pdf, svg}
-#savefig.bbox:      standard    # {tight, standard}
+savefig.bbox: tight # {tight, standard}
 # 'tight' is incompatible with generating frames
 # for animation
 #savefig.pad_inches:  0.1       # padding to be used, when bbox is set to 'tight'

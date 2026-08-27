@@ -14,7 +14,8 @@
 {%- endmacro %}
 
 {% macro fits_data_table(table_data, table_header, max_preview_rows) -%}
-  {% set truncated = False %}
+  {% set truncated, total_rows = False, table_data|length %}
+  {% set num_cols = table_header["TFIELDS"] %}
   {% if max_preview_rows != none and table_data|length > max_preview_rows %}
     {% set table_data = table_data[:max_preview_rows] %}
     {% set truncated = true %}
@@ -22,11 +23,11 @@
 
   <table>
     <caption>
-      Data
+      Data (showing 1-{{ table_data|length }} of {{ total_rows }} rows)
     </caption>
     <thead>
       <tr>
-        {% for i in range(table_header["TFIELDS"]) %}
+        {% for i in range(num_cols) %}
           <th>{{ get_column_name(i, table_header) }}</th>
         {% endfor %}
       </tr>
@@ -41,7 +42,7 @@
       {% endfor %}
       {% if truncated %}
         <tr>
-          {% for i in range(table_header["TFIELDS"]) %}
+          {% for i in range(num_cols) %}
             <td>...</td>
           {% endfor %}
         </tr>

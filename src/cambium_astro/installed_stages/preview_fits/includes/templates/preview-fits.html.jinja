@@ -1,34 +1,43 @@
 {% from "fits-header.html.jinja" import fits_header_table %}
 {% from "fits-table.html.jinja" import fits_data_table %}
-{# Generate the <img> #}
-{% set fits_image %}
-  <img src="{{ img_src }}" alt="Preview of {{ download_info["link"] }}" />
-{% endset %}
+
+{% macro hdu_name(index, hdu_row) -%}
+  {% set name =  index ~ ": " ~ hdu_row["hdu_type"] %}
+  {% set header = hdu_row["header"] %}
+  {% if header["EXTNAME"] is defined and header["EXTNAME"]|length>0 %}
+    {% set name = name ~ " — "~ header["EXTNAME"] %}
+  {% endif %}
+  {{ name }}
+{%- endmacro %}
+
+{% macro fits_image(index, hdu_row, download_info) -%}
+  <img
+    src="{{ hdu_row['image_link'] }}"
+    alt="Preview of {{ download_info['link'] }} HDU {{ index }}"
+  />
+{%- endmacro %}
 
 {# Actual content that gets rendered #}
-
 <link rel="stylesheet" href="{{ relative_path_modifier }}{{ css_link }}" />
 <div class="cambium-PreviewFITS">
-  {% include "download-link.html.jinja" %}
+  <h1>{% include "download-link.html.jinja" %}</h1>
 
   {% for hdu_row in hdu_entries %}
     <div class="cambium-PreviewFITS-row">
-      <h2>{{ hdu_row["hdu_type"] }}</h2>
-      {{ fits_header_table(hdu_row["header"])|trim }}
+      <h2>{{ hdu_name(loop.index0, hdu_row) }}</h2>
 
       {% if hdu_row["preview_type"] == "image" %}
-        {% set image %}
-          <img
-            src="{{ hdu_row['image_link'] }}"
-            alt="Preview of {{ download_info['link'] }} HDU {{ loop.index0 }}"
-          />
-        {% endset %}
-        {{ cambium_wrap(image, "img") }}
+        {{ cambium_wrap(fits_image(loop.index0, hdu_row, download_info), "img") }}
       {% elif hdu_row["preview_type"] == "table" %}
-        {{ fits_data_table(hdu_row["table_data"], hdu_row["header"],max_preview_rows) }}
+        {{ cambium_wrap(fits_data_table(hdu_row["table_data"], hdu_row["header"], max_preview_rows),"table") }}
       {% else %}
         No preview available for this HDU.
       {% endif %}
+
+      <details>
+        <summary>View Header</summary>
+        {{ cambium_wrap(fits_header_table(hdu_row["header"])|trim , "table") }}
+      </details>
     </div>
   {% endfor %}
 </div>
