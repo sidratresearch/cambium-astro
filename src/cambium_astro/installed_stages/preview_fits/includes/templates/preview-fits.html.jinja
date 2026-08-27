@@ -12,9 +12,10 @@
 
   {% for hdu_row in hdu_entries %}
     <div class="cambium-PreviewFITS-row">
-      <h2>{{ hdu_row["type"] }}</h2>
+      <h2>{{ hdu_row["hdu_type"] }}</h2>
       {{ fits_header_table(hdu_row["header"], "Header")|trim }}
-      {% if hdu_row["image_link"] %}
+
+      {% if hdu_row["preview_type"] == "image" %}
         {% set image %}
           <img
             src="{{ hdu_row['image_link'] }}"
@@ -22,8 +23,8 @@
           />
         {% endset %}
         {{ cambium_wrap(image, "img") }}
-      {% elif hdu_row["table_data"] is defined %}
-        Table
+      {% elif hdu_row["preview_type"] == "table" %}
+        Table previews TBD
       {% endif %}
     </div>
   {% endfor %}

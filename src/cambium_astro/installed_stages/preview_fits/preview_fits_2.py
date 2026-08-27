@@ -1,6 +1,7 @@
 """Cambium stage to create preview pages for FITS files."""
 
 import logging
+import re
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 
@@ -265,14 +266,16 @@ class PreviewFITS2(Stage):
 
         with fits.open(fits_path) as hdu_list:
             for i, hdu in enumerate(hdu_list):
-                hdu_preview = {"type": type(hdu).__name__, "header": hdu.header}
+                hdu_preview = {"hdu_type": type(hdu).__name__, "header": hdu.header}
                 hdu_info = preview.hdu_info[i]
                 if hdu_info["image_uuid"] is not None:
                     hdu_preview["image_link"] = tree.leaves["final_path"][
                         hdu_info["image_uuid"]
-                    ]
+                    ].name
+                    hdu_preview["preview_type"] = "image"
                 if hdu_info["display_as_table"]:
                     hdu_preview["table_data"] = hdu.data
+                    hdu_preview["preview_type"] = "table"
 
                 hdu_previews.append(hdu_preview)
 
@@ -286,7 +289,10 @@ class PreviewFITS2(Stage):
                 tree.leaves["final_path"][md_uuid]
             ),
         )
-        tree.abs_leaf_path(md_uuid).write_text(md_content)
+        # strip all indentation and newlines (safe since we have no <pre> tags)
+        # prevents marko from thinking there's an indented code block
+        replaced = re.sub(r"^\s*", "", md_content, flags=re.MULTILINE)
+        tree.abs_leaf_path(md_uuid).write_text(replaced)
 
     def _pre_hook_fits(self, fits_uuid: str, preview: _Preview, tree: TreeSpan) -> None:
         """Copy the FITS data from its original location to the new FITS leaf."""
@@ -304,8 +310,9 @@ class PreviewFITS2(Stage):
 
         fits_filepath = tree.leaves["initial_path"][preview.md_uuid]
 
-        # print(f"\n{image_uuid} uses hdu {i} from {fits_filepath}")
-        # with fits.open(fits_filepath) as hdu_list:
-        #     hdu_list.info()
+        with fits.open(fits_filepath) as hdu_list:
+            image_hdu = hdu_list[hdu_index]
+            image_header, image_data = image_hdu.header, image_hdu.data
 
-        tree.abs_leaf_path(image_uuid).touch()
+        plt.imshow(image_data)
+        plt.savefig(tree.abs_leaf_path(image_uuid))
