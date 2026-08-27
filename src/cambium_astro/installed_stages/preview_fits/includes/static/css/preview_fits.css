@@ -1,12 +1,14 @@
 div.cambium-PreviewFITS {
-  display: flex;
-  gap: 2rem;
+  div.cambium-PreviewFITS-upper {
+    display: flex;
+    align-items: flex-start;
+  }
 
   div.cambium-img-holder {
     margin-top: 0;
   }
 
-  a.download-link {
+  a.cambium-PreviewFITS-download-link {
     display: inline-flex;
     svg {
       width: 1rem;

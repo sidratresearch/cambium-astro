@@ -8,11 +8,10 @@ from astropy.io import fits
 from cambium.builtin_stages.utils import (
     WrappedBlocksMixin,
     get_relative_path_modifier,
-    path_matches_patterns,
 )
-from cambium.config import sort_user_paths
 from cambium.stage import Stage, StageConfig
 from cambium.tree import TreeSpan
+from cambium.utils import path_matches_patterns, sort_user_paths
 from jinja2 import Environment, FileSystemLoader
 from matplotlib import pyplot as plt
 
@@ -48,6 +47,9 @@ class PreviewFITS(Stage):
 
         self.css_file = "css/preview_fits.css"
         # path from includes/static to the CSS file we want to import on preview pages
+
+        style_path = Path(__file__).parent / "root.mplstyle/root.mplstyle"
+        plt.style.use(style_path)
 
     def tree_hook(self, tree: TreeSpan) -> None:
         # get what the actual path of the CSS file will be in the build directory
@@ -102,7 +104,6 @@ class PreviewFITS(Stage):
         logger.info(f"Creating preview page for {fits_initial_path}")
 
     def pre_hook(self, leaf_uuid: str, tree: TreeSpan) -> None:
-        # figure out if this is the index.html
         match self.uuid_to_type[leaf_uuid]:
             case "fits":
                 self._pre_hook_fits(leaf_uuid, tree)
@@ -136,14 +137,21 @@ class PreviewFITS(Stage):
         fits_path = tree.leaves["initial_path"][
             self.fits_to_md[self.image_to_fits[image_uuid]]
         ]
-        logger.debug(f"Reading FITS file {fits_path}")
-        fits_data = fits.getdata(fits_path)
-
         image_path = tree.abs_leaf_path(image_uuid)
+        logger.debug(f"Reading FITS file {fits_path}")
 
-        style_path = Path(__file__).parent / "root.mplstyle/root.mplstyle"
+        with fits.open(fits_path) as hdu_list:
+            print()
+            hdu_list.info()
+            if len(hdu_list) > 1:
+                print(f"{fits_path} data={hdu_list[0].data}")
 
-        plt.style.use(style_path)
+        fits_data = fits.getdata(fits_path)
+        if len(fits_data.shape) != 2:
+            raise RuntimeError(
+                f"Cannot create preview for FITS file {fits_path} as it has the shape {fits_data.shape}"
+            )
+
         plt.imshow(fits_data)
         plt.savefig(image_path)
 
@@ -158,7 +166,11 @@ def get_md_content(
     """Get the content for the Markdown preview page."""
     fits_path = tree.leaves["initial_path"][md_uuid]
     download_filename = tree.leaves["initial_path"][fits_uuid].name
-    fits_header = fits.getheader(fits_path)
+    fits_data, fits_header = fits.getdata(fits_path, header=True)
+
+    data_type = "Unknown"
+    if fits_data.size > 0:
+        data_type = str(type(fits_data.flatten()[0])).split("'")[1]
 
     jinja_environment = Environment(
         loader=FileSystemLoader(tree.config.template_directories),
@@ -172,6 +184,8 @@ def get_md_content(
     return template.render(
         download_filename=download_filename,
         img_src="./" + fits_path.with_suffix(image_suffix).name,
+        img_shape=fits_data.shape,
+        data_type=data_type,
         fits_filesize=fits_path.stat().st_size,
         fits_header=fits_header,
         cambium_wrap=WrappedBlocksMixin.wrap_anything,

@@ -3,15 +3,11 @@
   <img src="{{ img_src }}" alt="Preview of {{ download_filename }}" />
 {% endset %}
 
-{# Actual content that gets rendered #}
 
-<link rel="stylesheet" href="{{ relative_path_modifier }}{{ css_link }}" />
-<div class="cambium-PreviewFITS">
-  {# cambium_wrap adds the div.cambium-img-holder #}
-  {{ cambium_wrap(fits_image, "img") }}
+{% set minitable %}
   <table>
     <caption>
-      <a href="./{{ download_filename }}" class="download-link">
+      <a href="./{{ download_filename }}" class="cambium-PreviewFITS-download-link">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" fill="currentColor">
           <!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
           <!-- classic/solid/download -->
@@ -21,6 +17,35 @@
         </svg>
         {{ download_filename }} ({{ fits_filesize|filesizeformat }})</a
       >
+    </caption>
+    <thead></thead>
+    <tbody>
+      <tr>
+        <td>Shape</td>
+        <td>{{ img_shape[::-1] | join(" x ") }}</td>
+      </tr>
+      <tr>
+        <td>Data Type</td>
+        <td>{{ data_type }}</td>
+      </tr>
+    </tbody>
+  </table>
+{% endset %}
+
+{# Actual content that gets rendered #}
+
+<link rel="stylesheet" href="{{ relative_path_modifier }}{{ css_link }}" />
+<div class="cambium-PreviewFITS">
+  <div class="cambium-PreviewFITS-upper">
+    {# cambium_wrap adds the div.cambium-img-holder #}
+    {{ cambium_wrap(fits_image, "img") }}
+    {{ minitable }}
+  </div>
+  <!-- </div> -->
+
+  <table>
+    <caption>
+      Full FITS Header
     </caption>
     <thead>
       <tr>
@@ -33,11 +58,14 @@
     </thead>
     <tbody>
       {% for key, value in fits_header|items %}
-        <tr>
-          <td align="left">{{ key }}</td>
-          <td align="left">{{ value }}</td>
-          <td align="left">{{ fits_header.comments[key] }}</td>
-        </tr>
+        {% set comment =  fits_header.comments[key] %}
+        {% if key|length>0 or value|length>0 or comment|length>0 %}
+          <tr>
+            <td align="left">{{ key }}</td>
+            <td align="left">{{ value }}</td>
+            <td align="left">{{ comment }}</td>
+          </tr>
+        {% endif %}
       {% endfor %}
     </tbody>
   </table>
