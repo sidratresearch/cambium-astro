@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class PreviewFITSConfig(StageConfig):
     enable_paths: list[str] = ["*.fits", "*.fit"]
     disable_paths: list[str] = []
-    image_filetype: str = "jpg"
+    image_filetype: str = "png"
 
 
 class UUIDMapping(TypedDict):

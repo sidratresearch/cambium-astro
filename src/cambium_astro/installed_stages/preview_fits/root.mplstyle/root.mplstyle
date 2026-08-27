@@ -341,7 +341,7 @@
 ## Following are default face and edge colors, default tick sizes,
 ## default font sizes for tick labels, and so on.  See
 ## https://matplotlib.org/stable/api/axes_api.html#module-matplotlib.axes
-axes.facecolor: "#f9f9f9" # axes background color
+# axes.facecolor: "#f9f9f9" # axes background color
 #axes.edgecolor:     black   # axes edge color
 #axes.linewidth:     0.8     # edge line width
 #axes.grid:          False   # display grid or not
@@ -557,7 +557,7 @@ axes.facecolor: "#f9f9f9" # axes background color
 #figure.labelsize:   large     # size of the figure label (``Figure.sup[x|y]label()``)
 #figure.labelweight: normal    # weight of the figure label
 #figure.figsize:     6.4, 4.8  # figure size in inches
-#figure.dpi:         100       # figure dots per inch
+figure.dpi: 150 # figure dots per inch
 #figure.facecolor:   white     # figure face color
 #figure.edgecolor:   white     # figure edge color
 #figure.frameon:     True      # enable figure frame
@@ -688,7 +688,7 @@ image.origin: lower # {lower, upper}
 # 'tight' is incompatible with generating frames
 # for animation
 #savefig.pad_inches:  0.1       # padding to be used, when bbox is set to 'tight'
-#savefig.transparent: False     # whether figures are saved with a transparent
+savefig.transparent: True # whether figures are saved with a transparent
 # background by default
 #savefig.orientation: portrait  # orientation of saved figure, for PostScript output only
 

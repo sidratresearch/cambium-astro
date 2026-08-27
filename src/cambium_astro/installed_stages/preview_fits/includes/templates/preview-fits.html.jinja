@@ -25,6 +25,8 @@
         {{ cambium_wrap(image, "img") }}
       {% elif hdu_row["preview_type"] == "table" %}
         Table previews TBD
+      {% else %}
+        No preview available for this HDU.
       {% endif %}
     </div>
   {% endfor %}
