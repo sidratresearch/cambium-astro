@@ -1,0 +1,51 @@
+{% macro get_column_name(index, table_header) -%}
+  {% set column_name = "Column" ~ (index+1) %}
+  {% set name_key, unit_key = "TTYPE"~(index+1), "TUNIT"~(index+1) %}
+
+  {% if table_header[name_key] is defined and table_header[name_key]|length>0 %}
+    {% set column_name = table_header[name_key] %}
+  {% endif %}
+
+  {% if table_header[unit_key] is defined and table_header[unit_key]|length>0 %}
+    {% set column_name = column_name ~ " (" ~ table_header[unit_key] ~")" %}
+  {% endif %}
+
+  {{ column_name }}
+{%- endmacro %}
+
+{% macro fits_data_table(table_data, table_header, max_preview_rows) -%}
+  {% set truncated = False %}
+  {% if max_preview_rows != none and table_data|length > max_preview_rows %}
+    {% set table_data = table_data[:max_preview_rows] %}
+    {% set truncated = true %}
+  {% endif %}
+
+  <table>
+    <caption>
+      Data
+    </caption>
+    <thead>
+      <tr>
+        {% for i in range(table_header["TFIELDS"]) %}
+          <th>{{ get_column_name(i, table_header) }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in table_data %}
+        <tr>
+          {% for cell in row %}
+            <td>{{ cell }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      {% if truncated %}
+        <tr>
+          {% for i in range(table_header["TFIELDS"]) %}
+            <td>...</td>
+          {% endfor %}
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+{%- endmacro %}

@@ -13,6 +13,7 @@ from cambium.tree import TreeSpan
 from cambium.utils import path_matches_patterns, sort_user_paths
 from jinja2 import Environment, FileSystemLoader
 from matplotlib import pyplot as plt
+from pydantic import PositiveInt
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class PreviewFITSConfig(StageConfig):
     enable_paths: list[str] = ["*.fits", "*.fit"]
     disable_paths: list[str] = []
     image_filetype: str = "png"
+    max_preview_rows: PositiveInt | None = 25
 
 
 class UUIDMapping(TypedDict):
@@ -274,6 +276,7 @@ class PreviewFITS2(Stage):
                     ].name
                     hdu_preview["preview_type"] = "image"
                 if hdu_info["display_as_table"]:
+                    # TODO: bintables
                     hdu_preview["table_data"] = hdu.data
                     hdu_preview["preview_type"] = "table"
 
@@ -283,6 +286,7 @@ class PreviewFITS2(Stage):
             download_info=download_info,
             hdu_entries=hdu_previews,
             # shared across all leaves
+            max_preview_rows=self.config.max_preview_rows,
             cambium_wrap=WrappedBlocksMixin.wrap_anything,
             css_link=self.css_link,
             relative_path_modifier=get_relative_path_modifier(

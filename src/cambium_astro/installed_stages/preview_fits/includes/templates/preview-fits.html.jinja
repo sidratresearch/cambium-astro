@@ -1,4 +1,5 @@
 {% from "fits-header.html.jinja" import fits_header_table %}
+{% from "fits-table.html.jinja" import fits_data_table %}
 {# Generate the <img> #}
 {% set fits_image %}
   <img src="{{ img_src }}" alt="Preview of {{ download_info["link"] }}" />
@@ -13,7 +14,7 @@
   {% for hdu_row in hdu_entries %}
     <div class="cambium-PreviewFITS-row">
       <h2>{{ hdu_row["hdu_type"] }}</h2>
-      {{ fits_header_table(hdu_row["header"], "Header")|trim }}
+      {{ fits_header_table(hdu_row["header"])|trim }}
 
       {% if hdu_row["preview_type"] == "image" %}
         {% set image %}
@@ -24,7 +25,7 @@
         {% endset %}
         {{ cambium_wrap(image, "img") }}
       {% elif hdu_row["preview_type"] == "table" %}
-        Table previews TBD
+        {{ fits_data_table(hdu_row["table_data"], hdu_row["header"],max_preview_rows) }}
       {% else %}
         No preview available for this HDU.
       {% endif %}
