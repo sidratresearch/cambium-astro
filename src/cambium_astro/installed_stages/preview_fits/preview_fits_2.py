@@ -6,9 +6,11 @@ from typing import Any, Literal, TypedDict
 
 import numpy as np
 from astropy.io import fits
+from cambium.builtin_stages.utils import WrappedBlocksMixin, get_relative_path_modifier
 from cambium.stage import Stage, StageConfig
 from cambium.tree import TreeSpan
 from cambium.utils import path_matches_patterns, sort_user_paths
+from jinja2 import Environment, FileSystemLoader
 from matplotlib import pyplot as plt
 
 logger = logging.getLogger(__name__)
@@ -201,6 +203,8 @@ class PreviewFITS2(Stage):
         )
         self.css_link = static_dir / self.css_file
 
+        self._get_jinja_template(tree)
+
         # cast the deque to a list so that we can add new leaves to the end
         # we don't want to re-visit the added leaves anyway
         for leaf_uuid in list(tree.leaves["uuids"]):
@@ -217,6 +221,16 @@ class PreviewFITS2(Stage):
         preview = _Preview(fits_initial_path, md_uuid, self, tree)
         preview.update_uuid_mapping(len(self.preview_objs), self)
         self.preview_objs.append(preview)
+
+    def _get_jinja_template(self, tree: TreeSpan) -> None:
+        jinja_environment = Environment(
+            loader=FileSystemLoader(tree.config.template_directories),
+            lstrip_blocks=True,
+            trim_blocks=True,  # stops Jinja lines from being replaced with newlines
+            # if not enabled, Marko doesn't recognize the table as being a single HTMLBlock
+        )
+
+        self.md_template = jinja_environment.get_template("preview-fits.html.jinja")
 
     # --------------------------------------------------------------------#
     #                         Pre hook + helpers                          #
@@ -249,7 +263,6 @@ class PreviewFITS2(Stage):
 
         hdu_previews = []
 
-        # print(f"\n{fits_path.name}")
         with fits.open(fits_path) as hdu_list:
             for i, hdu in enumerate(hdu_list):
                 hdu_preview = {"type": type(hdu).__name__, "header": hdu.header}
@@ -261,10 +274,19 @@ class PreviewFITS2(Stage):
                 if hdu_info["display_as_table"]:
                     hdu_preview["table_data"] = hdu.data
 
-                # print(hdu_preview)
                 hdu_previews.append(hdu_preview)
 
-        tree.abs_leaf_path(md_uuid).touch()
+        md_content = self.md_template.render(
+            download_info=download_info,
+            hdu_entries=hdu_previews,
+            # shared across all leaves
+            cambium_wrap=WrappedBlocksMixin.wrap_anything,
+            css_link=self.css_link,
+            relative_path_modifier=get_relative_path_modifier(
+                tree.leaves["final_path"][md_uuid]
+            ),
+        )
+        tree.abs_leaf_path(md_uuid).write_text(md_content)
 
     def _pre_hook_fits(self, fits_uuid: str, preview: _Preview, tree: TreeSpan) -> None:
         """Copy the FITS data from its original location to the new FITS leaf."""

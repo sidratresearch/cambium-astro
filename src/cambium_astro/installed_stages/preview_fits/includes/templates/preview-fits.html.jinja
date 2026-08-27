@@ -1,0 +1,30 @@
+{% from "fits-header.html.jinja" import fits_header_table %}
+{# Generate the <img> #}
+{% set fits_image %}
+  <img src="{{ img_src }}" alt="Preview of {{ download_info["link"] }}" />
+{% endset %}
+
+{# Actual content that gets rendered #}
+
+<link rel="stylesheet" href="{{ relative_path_modifier }}{{ css_link }}" />
+<div class="cambium-PreviewFITS">
+  {% include "download-link.html.jinja" %}
+
+  {% for hdu_row in hdu_entries %}
+    <div class="cambium-PreviewFITS-row">
+      <h2>{{ hdu_row["type"] }}</h2>
+      {{ fits_header_table(hdu_row["header"], "Header")|trim }}
+      {% if hdu_row["image_link"] %}
+        {% set image %}
+          <img
+            src="{{ hdu_row['image_link'] }}"
+            alt="Preview of {{ download_info['link'] }} HDU {{ loop.index0 }}"
+          />
+        {% endset %}
+        {{ cambium_wrap(image, "img") }}
+      {% elif hdu_row["table_data"] is defined %}
+        Table
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
