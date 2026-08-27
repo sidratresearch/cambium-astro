@@ -1,0 +1,28 @@
+{% macro fits_header_table(header_obj, name) -%}
+  <table>
+    <caption>
+      {{ name }}
+    </caption>
+    <thead>
+      <tr>
+        {# Technically the align keyword is deprecated, but Marko uses it and we have CSS that selects it #}
+        {# So this doesn't actually rely on browser rendering #}
+        <th align="left">Key</th>
+        <th align="left">Value</th>
+        <th align="left">Comment</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key, value in header_obj|items %}
+        {% set comment =  header_obj.comments[key] %}
+        {% if key|length>0 or value|length>0 or comment|length>0 %}
+          <tr>
+            <td align="left">{{ key }}</td>
+            <td align="left">{{ value }}</td>
+            <td align="left">{{ comment }}</td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+{%- endmacro %}
