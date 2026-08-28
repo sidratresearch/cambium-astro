@@ -7,6 +7,8 @@ from typing import Any, Literal, TypedDict
 
 import numpy as np
 from astropy.io import fits
+from astropy.visualization import wcsaxes
+from astropy.wcs import WCS
 from cambium.builtin_stages.utils import WrappedBlocksMixin, get_relative_path_modifier
 from cambium.stage import Stage, StageConfig
 from cambium.tree import TreeSpan
@@ -94,14 +96,13 @@ class _Preview:
             # during the copy stage, the source path is a directory
             fits_initial_path / fits_initial_path.name,
             tree,
-            final_path=fits_initial_path / fits_initial_path.name,
         )
 
         # create image leaves
         self.image_uuids = []
         self.hdu_info: list[HDUInfo] = []
         with fits.open(fits_initial_path) as hdu_list:
-            if isinstance(hdu_list[0], (fits.GroupsHDU, fits.StreamingHDU)):
+            if isinstance(hdu_list[0], (fits.StreamingHDU)):
                 raise RuntimeError(
                     f"Can't handle FITS file {fits_initial_path} - incompatible HDU type."
                 )
@@ -276,7 +277,6 @@ class PreviewFITS2(Stage):
                     ].name
                     hdu_preview["preview_type"] = "image"
                 if hdu_info["display_as_table"]:
-                    # TODO: bintables
                     hdu_preview["table_data"] = hdu.data
                     hdu_preview["preview_type"] = "table"
 
@@ -298,6 +298,8 @@ class PreviewFITS2(Stage):
         replaced = re.sub(r"^\s*", "", md_content, flags=re.MULTILINE)
         tree.abs_leaf_path(md_uuid).write_text(replaced)
 
+        tree.leaves["metadata"][md_uuid].title = fits_path.name
+
     def _pre_hook_fits(self, fits_uuid: str, preview: _Preview, tree: TreeSpan) -> None:
         """Copy the FITS data from its original location to the new FITS leaf."""
         md_uuid = preview.md_uuid
@@ -318,5 +320,28 @@ class PreviewFITS2(Stage):
             image_hdu = hdu_list[hdu_index]
             image_header, image_data = image_hdu.header, image_hdu.data
 
-        plt.imshow(image_data)
-        plt.savefig(tree.abs_leaf_path(image_uuid))
+        # could look at handling BLANK
+        # https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf pg. 14
+        # only one case in example set
+
+        subplot_kw = {}
+        has_wcs = False
+        if "WCSAXES" in image_header or "CRPIX1" in image_header:
+            wcs = WCS(image_header)
+            subplot_kw["projection"] = wcs
+            has_wcs = True
+
+        fig, ax = plt.subplots(subplot_kw=subplot_kw)
+        im = ax.imshow(image_data)
+        fig.colorbar(im, label=image_header.get("BUNIT"))
+
+        if (
+            has_wcs
+            and "BMAJ" in image_header
+            and "BMIN" in image_header
+            and "BPA" in image_header
+        ):
+            wcsaxes.add_beam(ax, header=image_header, fc="k")
+
+        fig.savefig(tree.abs_leaf_path(image_uuid))
+        plt.close(fig)

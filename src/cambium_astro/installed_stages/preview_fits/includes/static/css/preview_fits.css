@@ -11,6 +11,10 @@ div.cambium-PreviewFITS {
     margin-top: 0;
   }
 
+  table {
+    min-width: 15rem;
+  }
+
   a.cambium-PreviewFITS-download-link {
     display: inline-flex;
     svg {
