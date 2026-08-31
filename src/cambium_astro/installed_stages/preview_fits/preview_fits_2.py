@@ -212,7 +212,9 @@ class PreviewFITS2(Stage):
 
         # get jinja template
         jinja_environment = make_jinja_environment(tree)
-        self.md_template = jinja_environment.get_template("preview-fits.html.jinja")
+        self.md_template = jinja_environment.get_template(
+            "PreviewFITS-preview-page.html.jinja"
+        )
 
         # cast the deque to a list so that we can add new leaves to the end
         # we don't want to re-visit the added leaves anyway

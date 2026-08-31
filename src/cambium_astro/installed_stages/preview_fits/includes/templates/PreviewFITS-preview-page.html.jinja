@@ -1,5 +1,5 @@
-{% from "fits-header.html.jinja" import fits_header_table %}
-{% from "fits-table.html.jinja" import fits_data_table %}
+{% from "PreviewFITS-fits-header.html.jinja" import fits_header_table %}
+{% from "PreviewFITS-fits-table.html.jinja" import fits_data_table %}
 
 {% macro hdu_name(index, hdu_row) -%}
   {% set name =  index ~ ": " ~ hdu_row["hdu_type"] %}
@@ -20,7 +20,7 @@
 {# Actual content that gets rendered #}
 <link rel="stylesheet" href="{{ relative_path_modifier }}{{ css_link }}" />
 <div class="cambium-PreviewFITS">
-  <h1>{% include "download-link.html.jinja" %}</h1>
+  <h1>{% include "PreviewFITS-download-link.html.jinja" %}</h1>
 
   {% for hdu_row in hdu_entries %}
     <div class="cambium-PreviewFITS-row">
