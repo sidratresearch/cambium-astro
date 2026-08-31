@@ -9,11 +9,14 @@ import numpy as np
 from astropy.io import fits
 from astropy.visualization import wcsaxes
 from astropy.wcs import WCS
-from cambium.builtin_stages.utils import WrappedBlocksMixin, get_relative_path_modifier
+from cambium.builtin_stages.utils import (
+    WrappedBlocksMixin,
+    get_relative_path_modifier,
+    make_jinja_environment,
+)
 from cambium.stage import Stage, StageConfig
 from cambium.tree import TreeSpan
 from cambium.utils import path_matches_patterns, sort_user_paths
-from jinja2 import Environment, FileSystemLoader
 from matplotlib import pyplot as plt
 from pydantic import PositiveInt
 
@@ -207,7 +210,9 @@ class PreviewFITS2(Stage):
         )
         self.css_link = static_dir / self.css_file
 
-        self._get_jinja_template(tree)
+        # get jinja template
+        jinja_environment = make_jinja_environment(tree)
+        self.md_template = jinja_environment.get_template("preview-fits.html.jinja")
 
         # cast the deque to a list so that we can add new leaves to the end
         # we don't want to re-visit the added leaves anyway
@@ -225,16 +230,6 @@ class PreviewFITS2(Stage):
         preview = _Preview(fits_initial_path, md_uuid, self, tree)
         preview.update_uuid_mapping(len(self.preview_objs), self)
         self.preview_objs.append(preview)
-
-    def _get_jinja_template(self, tree: TreeSpan) -> None:
-        jinja_environment = Environment(
-            loader=FileSystemLoader(tree.config.template_directories),
-            lstrip_blocks=True,
-            trim_blocks=True,  # stops Jinja lines from being replaced with newlines
-            # if not enabled, Marko doesn't recognize the table as being a single HTMLBlock
-        )
-
-        self.md_template = jinja_environment.get_template("preview-fits.html.jinja")
 
     # --------------------------------------------------------------------#
     #                         Pre hook + helpers                          #
