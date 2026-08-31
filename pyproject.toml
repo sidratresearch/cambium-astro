@@ -10,11 +10,15 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
-dependencies = ["cambium>=0.6.0", "astropy (>=8.0.1,<9.0.0)", "matplotlib (>=3.11.1,<4.0.0)"]
+dependencies = [
+  "cambium>=0.6.0",
+  "astropy (>=8.0.1,<9.0.0)",
+  "matplotlib (>=3.11.1,<4.0.0)",
+]
 dynamic = ["version"]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
-scripts.cambium-astro = "cambium_astro.cli:app"
+scripts.cambium-astro = "cambium_astro.cli:main"
 
 [dependency-groups]
 dev = [
