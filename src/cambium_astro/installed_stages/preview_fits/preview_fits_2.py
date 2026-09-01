@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 
+import matplotlib as mpl
 import numpy as np
 from astropy.io import fits
 from astropy.visualization import wcsaxes
@@ -90,6 +91,8 @@ class _Preview:
         caller: "PreviewFITS2",
         tree: TreeSpan,
     ) -> None:
+        self.fits_initial_path = fits_initial_path
+
         # store the markdown leaf
         self.md_uuid = md_uuid
 
@@ -133,13 +136,11 @@ class _Preview:
 
                 elif isinstance(hdu, fits.ImageHDU):
                     if not data_needs_image_leaf(hdu.data):
-                        logger.warning(
-                            f"Not creating preview image for {fits_initial_path} HDU {i}"
-                        )
                         self.hdu_info.append(
                             HDUInfo(image_uuid=None, display_as_table=False)
                         )
                         continue
+
                     image_path = get_image_path(
                         fits_initial_path, hdu, i + 1, caller.config.image_filetype
                     )
@@ -192,8 +193,10 @@ class PreviewFITS2(Stage):
         # other long-term storage
         self.css_file = "css/preview_fits.css"
         # path from includes/static to the CSS file we want to import on preview pages
-        style_path = Path(__file__).parent / "root.mplstyle/root.mplstyle"
+        self.style_directory = Path(__file__).parent / "mplstyle"
+        style_path = self.style_directory / "maple.mplstyle"
         plt.style.use(style_path)
+        self.rc_params = mpl.rc_params_from_file(style_path)
 
         # store the files we'll operate on
         self.preview_objs: list[_Preview] = []
@@ -215,6 +218,14 @@ class PreviewFITS2(Stage):
         self.md_template = jinja_environment.get_template(
             "PreviewFITS-preview-page.html.jinja"
         )
+
+        # load fonts into matplotlib
+        font_directories = [self.style_directory] + [
+            d for d, _ in tree.config.static_directories["theme"]
+        ]
+        font_files = mpl.font_manager.findSystemFonts(fontpaths=font_directories)
+        for font_file in font_files:
+            mpl.font_manager.fontManager.addfont(font_file)
 
         # cast the deque to a list so that we can add new leaves to the end
         # we don't want to re-visit the added leaves anyway
@@ -330,7 +341,12 @@ class PreviewFITS2(Stage):
 
         fig, ax = plt.subplots(subplot_kw=subplot_kw)
         im = ax.imshow(image_data)
-        fig.colorbar(im, label=image_header.get("BUNIT"))
+        cbar = fig.colorbar(im, label=image_header.get("BUNIT"))
+        cbar.minorticks_off()  # override generic yaxis settings
+
+        if has_wcs:
+            apply_tick_styles(ax.coords[0], "x", self.rc_params)
+            apply_tick_styles(ax.coords[1], "y", self.rc_params)
 
         if (
             has_wcs
@@ -342,3 +358,22 @@ class PreviewFITS2(Stage):
 
         fig.savefig(tree.abs_leaf_path(image_uuid))
         plt.close(fig)
+
+
+def apply_tick_styles(
+    axis: wcsaxes.CoordinateHelper, which: Literal["x", "y"], rc_params: mpl.RcParams
+) -> None:
+    """Override WCS tick styling with the loaded styles."""
+    generic = {
+        key.removeprefix(f"{which}tick."): value
+        for key, value in rc_params.find_all(f"{which}tick\\.(?!major|minor)").items()
+    }
+    tick_major = {
+        key.removeprefix(f"{which}tick.major."): value
+        for key, value in rc_params.find_all(f"{which}tick.major").items()
+    }
+    axis.tick_params(which="major", **{**generic, **tick_major})
+    axis.tick_params(
+        which="minor",
+        length=rc_params.find_all(f"{which}tick.minor.size")[f"{which}tick.minor.size"],
+    )

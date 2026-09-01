@@ -1,19 +1,11 @@
-#### MATPLOTLIBRC 
+#### Matplotlib Style File for cambium-astro
 #
-# Downloaded from https://github.com/matplotlib/matplotlib/blob/e519c449e9326c140993ae00a653f8db761a07f5/lib/matplotlib/mpl-data/matplotlibrc
-# and modified under the accompanying license
+# Intended to work alongside the styling for Astropy's WCSAxes, and Cambium's Maple theme
 #
+# Modified from https://github.com/matplotlib/matplotlib/blob/e519c449e9326c140993ae00a653f8db761a07f5/lib/matplotlib/mpl-data/matplotlibrc
 # Lines which reference parameters only available in matplotlibrc files (and not
 # mplstyle files) have been removed
 
-## Blank lines, or lines starting with a comment symbol, are ignored, as are
-## trailing comments.  Other lines must have the format:
-##     key: val  # optional comment
-##
-## Formatting: Use PEP8-like style (as enforced in the rest of the codebase).
-## All lines start with an additional '#', so that removing all leading '#'s
-## yields a valid style file.
-##
 ## Colors: for the color values below, you can either use
 ##     - a Matplotlib color string, such as r, k, or b
 ##     - an RGB tuple, such as (1.0, 0.5, 0.0)
@@ -27,41 +19,8 @@
 ## using the comment character # in the string.
 ##
 ## This file (and other style files) must be encoded as utf-8.
-##
-## Matplotlib configuration are currently divided into following parts:
-##     - BACKENDS
-##     - LINES
-##     - PATCHES
-##     - HATCHES
-##     - BOXPLOT
-##     - FONT
-##     - TEXT
-##     - LaTeX
-##     - AXES
-##     - DATES
-##     - TICKS
-##     - GRIDS
-##     - LEGEND
-##     - FIGURE
-##     - IMAGES
-##     - CONTOUR PLOTS
-##     - ERRORBAR PLOTS
-##     - HISTOGRAM PLOTS
-##     - SCATTER PLOTS
-##     - AGG RENDERING
-##     - PATHS
-##     - SAVING FIGURES
-##     - INTERACTIVE KEYMAPS
-##     - ANIMATION
 
 ##### CONFIGURATION BEGINS HERE
-
-
-## ***************************************************************************
-## * BACKENDS                                                                *
-## ***************************************************************************
-
-#figure.hooks:          # list of dotted.module.name:dotted.callable.name
 
 
 ## ***************************************************************************
@@ -69,7 +28,7 @@
 ## ***************************************************************************
 ## See https://matplotlib.org/stable/api/artist_api.html#module-matplotlib.lines
 ## for more information on line properties.
-#lines.linewidth: 1.5               # line width in points
+lines.linewidth: 3 # line width in points
 #lines.linestyle: -                 # solid line
 #lines.color:     C0                # has no affect on plot(); see axes.prop_cycle
 #lines.marker:          None        # the default marker
@@ -229,7 +188,7 @@
 #font.size:    10.0
 
 #font.serif:      DejaVu Serif, Bitstream Vera Serif, Computer Modern Roman, New Century Schoolbook, Century Schoolbook L, Utopia, ITC Bookman, Bookman, Nimbus Roman No9 L, Times New Roman, Times, Palatino, Charter, serif
-#font.sans-serif: DejaVu Sans, Bitstream Vera Sans, Computer Modern Sans Serif, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif
+font.sans-serif: "Source Sans 3" #, DejaVu Sans, Bitstream Vera Sans, Computer Modern Sans Serif, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif
 #font.cursive:    Apple Chancery, Textile, Zapf Chancery, Sand, Script MT, Felipa, Comic Neue, Comic Sans MS, cursive
 #font.fantasy:    Chicago, Charcoal, Impact, Western, xkcd script, fantasy
 #font.monospace:  DejaVu Sans Mono, Bitstream Vera Sans Mono, Computer Modern Typewriter, Andale Mono, Nimbus Mono L, Courier New, Courier, Fixed, Terminal, monospace
@@ -341,7 +300,7 @@
 ## Following are default face and edge colors, default tick sizes,
 ## default font sizes for tick labels, and so on.  See
 ## https://matplotlib.org/stable/api/axes_api.html#module-matplotlib.axes
-# axes.facecolor:    white   # axes background color
+axes.facecolor: none # axes background color
 #axes.edgecolor:     black   # axes edge color
 #axes.linewidth:     0.8     # edge line width
 #axes.grid:          False   # display grid or not
@@ -349,19 +308,19 @@
 #axes.grid.which:    major   # grid lines at {major, minor, both} ticks
 #axes.titlelocation: center  # alignment of the title: {left, right, center}
 #axes.titlesize:     large   # font size of the axes title
-#axes.titleweight:   normal  # font weight of title
+axes.titleweight: bold # font weight of title
 #axes.titlecolor:    auto    # color of the axes title, auto falls back to
 # text.color as default value
 #axes.titley:        None    # position title (axes relative units).  None implies auto
 #axes.titlepad:      6.0     # pad between axes and title in points
 #axes.labelsize:     medium  # font size of the x and y labels
 #axes.labelpad:      4.0     # space between label and axis
-#axes.labelweight:   normal  # weight of the x and y labels
+axes.labelweight: bold # weight of the x and y labels
 #axes.labelcolor:    black
-#axes.axisbelow:     line    # draw axis gridlines and ticks:
+axes.axisbelow: True # draw axis gridlines and ticks:
 #     - below patches (True)
 #     - above patches but below lines ('line')
-#     - above all (False)
+#     - above all ()
 
 #axes.formatter.limits: -5, 6  # use scientific notation if log10
 # of the axis range is smaller than the
@@ -455,57 +414,74 @@
 ## * TICKS                                                                   *
 ## ***************************************************************************
 ## See https://matplotlib.org/stable/api/axis_api.html#matplotlib.axis.Tick
+# Location
 #xtick.top:           False   # draw ticks on the top side
 #xtick.bottom:        True    # draw ticks on the bottom side
 #xtick.labeltop:      False   # draw label on the top
 #xtick.labelbottom:   True    # draw label on the bottom
-#xtick.major.size:    3.5     # major tick size in points
-#xtick.minor.size:    2       # minor tick size in points
-#xtick.major.width:   0.8     # major tick width in points
-#xtick.minor.width:   0.6     # minor tick width in points
-#xtick.major.pad:     3.5     # distance to major tick label in points
-#xtick.minor.pad:     3.4     # distance to the minor tick label in points
-#xtick.color:         black   # color of the ticks
-#xtick.labelcolor:    inherit # color of the tick labels or inherit from xtick.color
-#xtick.labelsize:     medium  # font size of the tick labels
-#xtick.direction:     out     # direction: {in, out, inout}
-#xtick.minor.visible: False   # visibility of minor ticks on x-axis
-#xtick.major.top:     True    # draw x axis top major ticks
-#xtick.major.bottom:  True    # draw x axis bottom major ticks
-#xtick.minor.top:     True    # draw x axis top minor ticks
-#xtick.minor.bottom:  True    # draw x axis bottom minor ticks
-#xtick.minor.ndivs:   auto    # number of minor ticks between the major ticks on x-axis
-#xtick.alignment:     center  # alignment of xticks
-
 #ytick.left:          True    # draw ticks on the left side
 #ytick.right:         False   # draw ticks on the right side
 #ytick.labelleft:     True    # draw tick labels on the left side
 #ytick.labelright:    False   # draw tick labels on the right side
-#ytick.major.size:    3.5     # major tick size in points
-#ytick.minor.size:    2       # minor tick size in points
-#ytick.major.width:   0.8     # major tick width in points
-#ytick.minor.width:   0.6     # minor tick width in points
-#ytick.major.pad:     3.5     # distance to major tick label in points
-#ytick.minor.pad:     3.4     # distance to the minor tick label in points
-#ytick.color:         black   # color of the ticks
-#ytick.labelcolor:    inherit # color of the tick labels or inherit from ytick.color
-#ytick.labelsize:     medium  # font size of the tick labels
-#ytick.direction:     out     # direction: {in, out, inout}
-#ytick.minor.visible: False   # visibility of minor ticks on y-axis
+xtick.major.top: False # draw x axis top major ticks - override WCS
+#xtick.major.bottom:  True    # draw x axis bottom major ticks
+#xtick.minor.top:     True    # draw x axis top minor ticks
+#xtick.minor.bottom:  True    # draw x axis bottom minor ticks
 #ytick.major.left:    True    # draw y axis left major ticks
-#ytick.major.right:   True    # draw y axis right major ticks
+ytick.major.right: False # draw y axis right major ticks - override WCS
 #ytick.minor.left:    True    # draw y axis left minor ticks
 #ytick.minor.right:   True    # draw y axis right minor ticks
+
+# length and width
+xtick.major.size: 6 # major tick size in points
+ytick.major.size: 6 # major tick size in points
+xtick.minor.size: 3 # minor tick size in points
+ytick.minor.size: 3 # minor tick size in points
+xtick.major.width: 0.5 # major tick width in points
+ytick.major.width: 0.5 # major tick width in points
+#xtick.minor.width:   0.6     # minor tick width in points
+#ytick.minor.width:   0.6     # minor tick width in points
+
+# tick--label padding
+#xtick.major.pad:     3.5     # distance to major tick label in points
+#ytick.major.pad:     3.5     # distance to major tick label in points
+#xtick.minor.pad:     3.4     # distance to the minor tick label in points
+#ytick.minor.pad:     3.4     # distance to the minor tick label in points
+
+# colours
+xtick.color: black # color of the ticks
+xtick.labelcolor: black # color of the tick labels or inherit from xtick.color - "inherit" is invalid during WCS override
+ytick.color: black # color of the ticks
+ytick.labelcolor: black # color of the tick labels or inherit from ytick.color - "inherit" is invalid during WCS override
+
+# labels
+#xtick.labelsize:     medium  # font size of the tick labels
+#ytick.labelsize:     medium  # font size of the tick labels
+
+# direction
+#xtick.direction:     out     # direction: {in, out, inout}
+#ytick.direction:     out     # direction: {in, out, inout}
+
+# visibility
+xtick.minor.visible: True # visibility of minor ticks on x-axis
+ytick.minor.visible: True # visibility of minor ticks on y-axis, match WCS Axes
+
+# number of minor ticks
+#xtick.minor.ndivs:   auto    # number of minor ticks between the major ticks on x-axis
 #ytick.minor.ndivs:   auto    # number of minor ticks between the major ticks on y-axis
-#ytick.alignment:     center_baseline  # alignment of yticks
+
+# alignment
+#xtick.alignment:     center  # alignment of xticks
+ytick.alignment: center # alignment of yticks
+
 
 
 ## ***************************************************************************
 ## * GRIDS                                                                   *
 ## ***************************************************************************
-#grid.color:     "#b0b0b0"  # grid color
+grid.color: "#cccccc" # grid color
 #grid.linestyle: -          # solid
-#grid.linewidth: 0.8        # in points
+grid.linewidth: 0.5 # in points
 #grid.alpha:     1.0        # transparency, between 0.0 and 1.0
 
 #grid.major.color:     None # If None defaults to grid.color
@@ -523,7 +499,7 @@
 ## * LEGEND                                                                  *
 ## ***************************************************************************
 #legend.loc:           best
-#legend.frameon:       True     # if True, draw the legend on a background patch
+legend.frameon: False # if True, draw the legend on a background patch
 #legend.framealpha:    0.8      # legend patch transparency
 #legend.facecolor:     inherit  # inherit from axes.facecolor; or color spec
 #legend.edgecolor:     0.8      # background patch boundary color
@@ -539,12 +515,12 @@
 #legend.title_fontsize: None    # None sets to the same as the default axes.
 
 ## Dimensions as fraction of font size:
-#legend.borderpad:     0.4  # border whitespace
-#legend.labelspacing:  0.5  # the vertical space between the legend entries
+legend.borderpad: 0 # border whitespace
+legend.labelspacing: 0 # the vertical space between the legend entries
 #legend.handlelength:  2.0  # the length of the legend lines
 #legend.handleheight:  0.7  # the height of the legend handle
 #legend.handletextpad: 0.8  # the space between the legend line and legend text
-#legend.borderaxespad: 0.5  # the border between the axes and legend edge
+legend.borderaxespad: 0 # the border between the axes and legend edge
 #legend.columnspacing: 2.0  # column separation
 
 
@@ -557,16 +533,16 @@
 #figure.labelsize:   large     # size of the figure label (``Figure.sup[x|y]label()``)
 #figure.labelweight: normal    # weight of the figure label
 #figure.figsize:     6.4, 4.8  # figure size in inches
-figure.dpi: 150 # figure dots per inch
-#figure.facecolor:   white     # figure face color
+figure.dpi: 300 # figure dots per inch
+figure.facecolor: "#f9f9f9" # figure face color
 #figure.edgecolor:   white     # figure edge color
 #figure.frameon:     True      # enable figure frame
 
 ## The figure subplot parameters.  All dimensions are a fraction of the figure width and height.
-#figure.subplot.left:   0.125  # the left side of the subplots of the figure
-#figure.subplot.right:  0.9    # the right side of the subplots of the figure
-#figure.subplot.bottom: 0.11   # the bottom of the subplots of the figure
-#figure.subplot.top:    0.88   # the top of the subplots of the figure
+figure.subplot.left: 0.125 # the left side of the subplots of the figure
+figure.subplot.right: 0.95 # the right side of the subplots of the figure
+figure.subplot.bottom: 0.15 # the bottom of the subplots of the figure
+figure.subplot.top: 0.85 # the top of the subplots of the figure
 #figure.subplot.wspace: 0.2    # the amount of width reserved for space between subplots,
 # expressed as a fraction of the average axis width
 #figure.subplot.hspace: 0.2    # the amount of height reserved for space between subplots,
@@ -683,27 +659,12 @@ image.origin: lower # {lower, upper}
 #savefig.dpi:       figure      # figure dots per inch or 'figure'
 #savefig.facecolor: auto        # figure face color when saving
 #savefig.edgecolor: auto        # figure edge color when saving
-savefig.bbox: tight # {tight, standard}
+#savefig.bbox:      standard    # {tight, standard}
 # 'tight' is incompatible with generating frames
 # for animation
 #savefig.pad_inches:  0.1       # padding to be used, when bbox is set to 'tight'
 savefig.transparent: True # whether figures are saved with a transparent
 # background by default
-#savefig.orientation: portrait  # orientation of saved figure, for PostScript output only
-
-### macosx backend params
-#macosx.window_mode : system   # How to open new figures (system, tab, window)
-# system uses the MacOS system preferences
-
-### ps backend params
-#ps.papersize:      letter  # {figure, letter, legal, ledger, A0-A10, B0-B10}
-#ps.useafm:         False   # use AFM fonts, results in small files
-#ps.usedistiller:   False   # {ghostscript, xpdf, None}
-# Experimental: may produce smaller files.
-# xpdf intended for production of publication quality files,
-# but requires ghostscript, xpdf and ps2eps
-#ps.distiller.res:  6000    # dpi
-#ps.fonttype:       3       # Output Type 3 (Type3) or Type 42 (TrueType)
 
 ### PDF backend params
 #pdf.compression:    6  # integer from 0 to 9
@@ -728,58 +689,3 @@ savefig.transparent: True # whether figures are saved with a transparent
 #pgf.rcfonts: True
 #pgf.preamble:  # See text.latex.preamble for documentation
 #pgf.texsystem: xelatex
-
-
-
-## ***************************************************************************
-## * INTERACTIVE KEYMAPS                                                     *
-## ***************************************************************************
-## Event keys to interact with figures/plots via keyboard.
-## See https://matplotlib.org/stable/users/explain/interactive.html for more
-## details on interactive navigation.  Customize these settings according to
-## your needs. Leave the field(s) empty if you don't need a key-map. (i.e.,
-## fullscreen : '')
-#keymap.fullscreen: f, ctrl+f   # toggling
-#keymap.home: h, r, home        # home or reset mnemonic
-#keymap.back: left, c, backspace, MouseButton.BACK  # forward / backward keys
-#keymap.forward: right, v, MouseButton.FORWARD      # for quick navigation
-#keymap.pan: p                  # pan mnemonic
-#keymap.zoom: o                 # zoom mnemonic
-#keymap.save: s, ctrl+s         # saving current figure
-#keymap.help: f1                # display help about active tools
-#keymap.quit: ctrl+w, cmd+w, q  # close the current figure
-#keymap.quit_all:               # close all figures
-#keymap.grid: g                 # switching on/off major grids in current axes
-#keymap.grid_minor: G           # switching on/off minor grids in current axes
-#keymap.yscale: l               # toggle scaling of y-axes ('log'/'linear')
-#keymap.xscale: k, L            # toggle scaling of x-axes ('log'/'linear')
-#keymap.copy: ctrl+c, cmd+c     # copy figure to clipboard
-
-
-## ***************************************************************************
-## * ANIMATION                                                               *
-## ***************************************************************************
-#animation.html: none  # How to display the animation as HTML in
-# the IPython notebook:
-#     - 'html5' uses HTML5 video tag
-#     - 'jshtml' creates a JavaScript animation
-#animation.writer:  ffmpeg        # MovieWriter 'backend' to use
-#animation.codec:   h264          # Codec to use for writing movie
-#animation.bitrate: -1            # Controls size/quality trade-off for movie.
-# -1 implies let utility auto-determine
-#animation.frame_format: png      # Controls frame format used by temp files
-
-## Path to ffmpeg binary.  Unqualified paths are resolved by subprocess.Popen.
-#animation.ffmpeg_path:  ffmpeg
-## Additional arguments to pass to ffmpeg.
-#animation.ffmpeg_args:
-
-## Path to ImageMagick's convert binary.  Unqualified paths are resolved by
-## subprocess.Popen, except that on Windows, we look up an install of
-## ImageMagick in the registry (as convert is also the name of a system tool).
-#animation.convert_path: convert
-## Additional arguments to pass to convert.
-#animation.convert_args: -layers, OptimizePlus
-#
-#animation.embed_limit:  20.0     # Limit, in MB, of size of base64 encoded
-# animation in HTML (i.e. IPython notebook)
