@@ -1,19 +1,25 @@
 """Cambium stage to create preview pages for FITS files."""
 
 import logging
+import re
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
+import matplotlib as mpl
+import numpy as np
 from astropy.io import fits
+from astropy.visualization import wcsaxes
+from astropy.wcs import WCS
 from cambium.builtin_stages.utils import (
     WrappedBlocksMixin,
     get_relative_path_modifier,
+    make_jinja_environment,
 )
 from cambium.stage import Stage, StageConfig
 from cambium.tree import TreeSpan
 from cambium.utils import path_matches_patterns, sort_user_paths
-from jinja2 import Environment, FileSystemLoader
 from matplotlib import pyplot as plt
+from pydantic import PositiveInt
 
 logger = logging.getLogger(__name__)
 
@@ -21,35 +27,183 @@ logger = logging.getLogger(__name__)
 class PreviewFITSConfig(StageConfig):
     enable_paths: list[str] = ["*.fits", "*.fit"]
     disable_paths: list[str] = []
-    image_filetype: str = "jpg"
+    image_filetype: str = "png"
+    max_preview_rows: PositiveInt | None = 10
+    mplstyle_path: Path | None = None
+
+
+class UUIDMapping(TypedDict):
+    preview_index: int
+    """Index of `PreviewFITS.preview_objs` that holds info relevant to this UUID."""
+    leaf_type: Literal["md", "fits", "image"]
+
+
+class HDUInfo(TypedDict):
+    image_uuid: str | None
+    """UUID of leaf in which to store an image, if any."""
+    display_as_table: bool
+    """Whether the data attribute should be read and displayed as a table. Mutually
+    exclusive with `image_uuid`"""
+
+
+def _fits_path_updater(fits_path: Path) -> Path:
+    return fits_path / "index.md"
+
+
+def data_needs_image_leaf(hdu_data: np.ndarray | None) -> bool:
+    """Check if the given HDU data can be previewed as an image.
+
+    Should only recieve data from PrimaryHDU and ImageHDU objects, not TableHDUs.
+    """
+    if hdu_data is None:
+        return False
+    if hdu_data.size == 0:
+        return False
+    return hdu_data.ndim == 2
+
+
+def get_image_path(
+    fits_path: Path,
+    hdu: fits.PrimaryHDU | fits.ImageHDU,
+    hdu_number: int,
+    image_suffix: str,
+) -> Path:
+    """Make up a filepath in which to put an image made from one HDU of a FITS file."""
+    base_image_name = fits_path.stem
+
+    hdu_name = f"HDU{hdu_number}"
+    if isinstance(hdu, fits.PrimaryHDU):
+        hdu_name += "-PrimaryHDU"
+    else:
+        hdu_name += "-ImageHDU"
+        if hdu.name is not None:
+            hdu_name += f"-{hdu.name}"
+
+    image_name = f"{base_image_name}-{hdu_name}.{image_suffix}"
+
+    return fits_path / image_name
+
+
+class _Preview:
+    def __init__(
+        self,
+        fits_initial_path: Path,
+        md_uuid: str,
+        caller: "PreviewFITS",
+        tree: TreeSpan,
+    ) -> None:
+        self.fits_initial_path = fits_initial_path
+
+        # store the markdown leaf
+        self.md_uuid = md_uuid
+
+        # create a companion leaf for the new data location
+        self.fits_uuid = caller.add_leaf(
+            # setting initial_path as fits_initial_path errors
+            # during the copy stage, the source path is a directory
+            fits_initial_path / fits_initial_path.name,
+            tree,
+        )
+
+        # create image leaves
+        self.image_uuids = []
+        self.hdu_info: list[HDUInfo] = []
+        with fits.open(fits_initial_path) as hdu_list:
+            if isinstance(hdu_list[0], (fits.StreamingHDU)):
+                raise RuntimeError(
+                    f"Can't handle FITS file {fits_initial_path} - incompatible HDU type."
+                )
+
+            # handle the PrimaryHDU
+            primary_needs_leaf = data_needs_image_leaf(hdu_list[0].data)
+            if primary_needs_leaf:
+                image_path = get_image_path(
+                    fits_initial_path, hdu_list[0], 0, caller.config.image_filetype
+                )
+                image_uuid = caller.add_leaf(image_path, tree)
+                self.image_uuids.append(image_uuid)
+                self.hdu_info.append(
+                    HDUInfo(image_uuid=image_uuid, display_as_table=False)
+                )
+            else:
+                self.hdu_info.append(HDUInfo(image_uuid=None, display_as_table=False))
+
+            # handle the remaining HDUs
+            for i, hdu in enumerate(hdu_list[1:]):
+                if isinstance(hdu, (fits.TableHDU, fits.BinTableHDU)):
+                    self.hdu_info.append(
+                        HDUInfo(image_uuid=None, display_as_table=True)
+                    )
+
+                elif isinstance(hdu, fits.ImageHDU):
+                    if not data_needs_image_leaf(hdu.data):
+                        self.hdu_info.append(
+                            HDUInfo(image_uuid=None, display_as_table=False)
+                        )
+                        continue
+
+                    image_path = get_image_path(
+                        fits_initial_path, hdu, i + 1, caller.config.image_filetype
+                    )
+                    image_uuid = caller.add_leaf(image_path, tree)
+
+                    self.image_uuids.append(image_uuid)
+                    self.hdu_info.append(
+                        HDUInfo(image_uuid=image_uuid, display_as_table=False)
+                    )
+
+                else:
+                    raise RuntimeError(f"Unknown HDU type {type(hdu)}")
+
+        # move the fits file
+        tree.update_leaf_path(self.md_uuid, "final", _fits_path_updater)
+        tree.update_leaf_path(self.md_uuid, "latest", _fits_path_updater)
+
+        # register hooks
+        caller._register_hook(self.md_uuid, tree, "pre_hooks")
+        caller._register_hook(self.fits_uuid, tree, "pre_hooks")
+        for image_uuid in self.image_uuids:
+            caller._register_hook(image_uuid, tree, "pre_hooks")
+
+    def update_uuid_mapping(self, index: int, stage: "PreviewFITS") -> None:
+        """Update the stage's mapping to include the newly created leaves."""
+        stage.uuid_mapping[self.md_uuid] = UUIDMapping(
+            preview_index=index, leaf_type="md"
+        )
+        stage.uuid_mapping[self.fits_uuid] = UUIDMapping(
+            preview_index=index, leaf_type="fits"
+        )
+        for image_uuid in self.image_uuids:
+            stage.uuid_mapping[image_uuid] = UUIDMapping(
+                preview_index=index, leaf_type="image"
+            )
 
 
 class PreviewFITS(Stage):
-    def _fits_path_updater(self, fits_path: Path) -> Path:
-        return fits_path / "index.md"
-
     def __init__(self, config_dict: dict[str, Any]) -> None:
-        self.config = PreviewFITSConfig.model_validate(config_dict)
-        self.enable_patterns = sort_user_paths(self.config.enable_paths)
-        self.disable_patterns = sort_user_paths(self.config.disable_paths)
-        self.image_suffix = "." + self.config.image_filetype
-
+        # Cambium stage management
         self.requires = []
         self.runs_before = ["TransformMarkdown", "IdentifyMetadata"]
         self.runs_after = []
 
-        # store mappings between the preview leaves and the data leaves
-        self.fits_to_md = {}
-        self.md_to_fits = {}
-        self.image_to_fits = {}
-        self.fits_to_image = {}
-        self.uuid_to_type: dict[str, Literal["md", "fits", "image"]] = {}
+        # config handling
+        self.config = PreviewFITSConfig.model_validate(config_dict)
+        self.enable_patterns = sort_user_paths(self.config.enable_paths)
+        self.disable_patterns = sort_user_paths(self.config.disable_paths)
 
+        # other long-term storage
         self.css_file = "css/preview_fits.css"
         # path from includes/static to the CSS file we want to import on preview pages
+        self.style_directory = Path(__file__).parent / "mplstyle"
+        self.mpl_style_paths = [self.style_directory / "maple.mplstyle"]
 
-        style_path = Path(__file__).parent / "root.mplstyle/root.mplstyle"
-        plt.style.use(style_path)
+        # store the files we'll operate on
+        self.preview_objs: list[_Preview] = []
+        self.uuid_mapping: dict[str, UUIDMapping] = {}
+
+    # --------------------------------------------------------------------#
+    #                        Tree hook + helpers                          #
+    # --------------------------------------------------------------------#
 
     def tree_hook(self, tree: TreeSpan) -> None:
         # get what the actual path of the CSS file will be in the build directory
@@ -57,6 +211,14 @@ class PreviewFITS(Stage):
             tree.build_directory
         )
         self.css_link = static_dir / self.css_file
+
+        self._setup_matplotlib(tree)
+
+        # get jinja template
+        jinja_environment = make_jinja_environment(tree)
+        self.md_template = jinja_environment.get_template(
+            "PreviewFITS-preview-page.html.jinja"
+        )
 
         # cast the deque to a list so that we can add new leaves to the end
         # we don't want to re-visit the added leaves anyway
@@ -71,123 +233,159 @@ class PreviewFITS(Stage):
     def _tree_hook_for_fits(
         self, md_uuid: str, fits_initial_path: Path, tree: TreeSpan
     ) -> None:
-        # change the final path for this leaf to be subfoldered and end in md
-        tree.update_leaf_path(md_uuid, "final", self._fits_path_updater)
-        tree.update_leaf_path(md_uuid, "latest", self._fits_path_updater)
-        self._register_hook(md_uuid, tree, "pre_hooks")
+        preview = _Preview(fits_initial_path, md_uuid, self, tree)
+        preview.update_uuid_mapping(len(self.preview_objs), self)
+        self.preview_objs.append(preview)
 
-        # create a companion leaf for the new data location
-        fits_uuid = self.add_leaf(
-            fits_initial_path,
-            tree,
-            final_path=fits_initial_path / fits_initial_path.name,
-        )
-        self._register_hook(fits_uuid, tree, "pre_hooks")
+    def _setup_matplotlib(self, tree: TreeSpan) -> None:
+        # load fonts into matplotlib
+        font_directories = [self.style_directory] + [
+            d for d, _ in tree.config.static_directories["theme"]
+        ]
+        font_files = mpl.font_manager.findSystemFonts(fontpaths=font_directories)
+        for font_file in font_files:
+            mpl.font_manager.fontManager.addfont(font_file)
 
-        # create a companion leaf for the image
-        image_uuid = self.add_leaf(
-            fits_initial_path.with_suffix(self.image_suffix),
-            tree,
-            final_path=fits_initial_path
-            / fits_initial_path.with_suffix(self.image_suffix).name,
-        )
-        self._register_hook(image_uuid, tree, "pre_hooks")
+        # load style files
+        if self.config.mplstyle_path is not None:
+            style_path = tree.root_directory / self.config.mplstyle_path
+            if not style_path.exists():
+                raise FileNotFoundError(
+                    f"Matplotlib style file `{self.config.mplstyle_path}` not found in {tree.root_directory.absolute()}"
+                )
+            self.mpl_style_paths.append(style_path)
+        plt.style.use(self.mpl_style_paths)
 
-        self.md_to_fits[md_uuid] = fits_uuid
-        self.fits_to_md[fits_uuid] = md_uuid
-        self.image_to_fits[image_uuid] = fits_uuid
-        self.fits_to_image[fits_uuid] = image_uuid
-        self.uuid_to_type[md_uuid] = "md"
-        self.uuid_to_type[fits_uuid] = "fits"
-        self.uuid_to_type[image_uuid] = "image"
-
-        logger.info(f"Creating preview page for {fits_initial_path}")
+    # --------------------------------------------------------------------#
+    #                         Pre hook + helpers                          #
+    # --------------------------------------------------------------------#
 
     def pre_hook(self, leaf_uuid: str, tree: TreeSpan) -> None:
-        match self.uuid_to_type[leaf_uuid]:
-            case "fits":
-                self._pre_hook_fits(leaf_uuid, tree)
+        leaf_type = self.uuid_mapping[leaf_uuid]["leaf_type"]
+        preview_index = self.uuid_mapping[leaf_uuid]["preview_index"]
+        preview = self.preview_objs[preview_index]
+        match leaf_type:
             case "md":
-                self._pre_hook_md(leaf_uuid, tree)
+                self._pre_hook_md(leaf_uuid, preview, tree)
+            case "fits":
+                self._pre_hook_fits(leaf_uuid, preview, tree)
             case "image":
-                self._pre_hook_image(leaf_uuid, tree)
+                self._pre_hook_image(leaf_uuid, preview, tree)
 
-    def _pre_hook_md(self, md_uuid: str, tree: TreeSpan) -> None:
-        fits_uuid = self.md_to_fits[md_uuid]
-        preview_content = get_md_content(
-            md_uuid,
-            fits_uuid,
-            tree,
-            self.image_suffix,
-            {
-                "css_link": self.css_link,
-                "relative_path_modifier": get_relative_path_modifier(
-                    tree.leaves["final_path"][md_uuid]
-                ),
-            },
+    def _pre_hook_md(self, md_uuid: str, preview: _Preview, tree: TreeSpan) -> None:
+        # download link: ./fits name
+        # download size
+        # primary headers
+        # maybe primary image
+        # some quantity of additional HDUs (header, table, image)
+
+        fits_path = tree.leaves["initial_path"][preview.md_uuid]
+        download_info = {
+            "link": fits_path.name,
+            "size": fits_path.stat().st_size,
+        }
+
+        hdu_previews = []
+
+        with fits.open(fits_path) as hdu_list:
+            for i, hdu in enumerate(hdu_list):
+                hdu_preview = {"hdu_type": type(hdu).__name__, "header": hdu.header}
+                hdu_info = preview.hdu_info[i]
+                if hdu_info["image_uuid"] is not None:
+                    hdu_preview["image_link"] = tree.leaves["final_path"][
+                        hdu_info["image_uuid"]
+                    ].name
+                    hdu_preview["preview_type"] = "image"
+                if hdu_info["display_as_table"]:
+                    hdu_preview["table_data"] = hdu.data
+                    hdu_preview["preview_type"] = "table"
+
+                hdu_previews.append(hdu_preview)
+
+        md_content = self.md_template.render(
+            download_info=download_info,
+            hdu_entries=hdu_previews,
+            # shared across all leaves
+            max_preview_rows=self.config.max_preview_rows,
+            cambium_wrap=WrappedBlocksMixin.wrap_anything,
+            css_link=self.css_link,
+            relative_path_modifier=get_relative_path_modifier(
+                tree.leaves["final_path"][md_uuid]
+            ),
         )
-        tree.abs_leaf_path(md_uuid).write_text(preview_content)
+        # strip all indentation and newlines (safe since we have no <pre> tags)
+        # prevents marko from thinking there's an indented code block
+        replaced = re.sub(r"^\s*", "", md_content, flags=re.MULTILINE)
+        tree.abs_leaf_path(md_uuid).write_text(replaced)
 
-    def _pre_hook_fits(self, fits_uuid: str, tree: TreeSpan) -> None:
-        md_uuid = self.fits_to_md[fits_uuid]
+        tree.leaves["metadata"][md_uuid].title = fits_path.name
+
+    def _pre_hook_fits(self, fits_uuid: str, preview: _Preview, tree: TreeSpan) -> None:
+        """Copy the FITS data from its original location to the new FITS leaf."""
+        md_uuid = preview.md_uuid
         fits_content = tree.leaves["initial_path"][md_uuid].read_bytes()
         tree.abs_leaf_path(fits_uuid).write_bytes(fits_content)
 
-    def _pre_hook_image(self, image_uuid: str, tree: TreeSpan) -> None:
-        fits_path = tree.leaves["initial_path"][
-            self.fits_to_md[self.image_to_fits[image_uuid]]
-        ]
-        image_path = tree.abs_leaf_path(image_uuid)
-        logger.debug(f"Reading FITS file {fits_path}")
+    def _pre_hook_image(
+        self, image_uuid: str, preview: _Preview, tree: TreeSpan
+    ) -> None:
+        for i, hdu_info in enumerate(preview.hdu_info):
+            if hdu_info["image_uuid"] == image_uuid:
+                hdu_index = i
+                break
 
-        with fits.open(fits_path) as hdu_list:
-            print()
-            hdu_list.info()
-            if len(hdu_list) > 1:
-                print(f"{fits_path} data={hdu_list[0].data}")
+        fits_filepath = tree.leaves["initial_path"][preview.md_uuid]
 
-        fits_data = fits.getdata(fits_path)
-        if len(fits_data.shape) != 2:
-            raise RuntimeError(
-                f"Cannot create preview for FITS file {fits_path} as it has the shape {fits_data.shape}"
-            )
+        with fits.open(fits_filepath) as hdu_list:
+            image_hdu = hdu_list[hdu_index]
+            image_header, image_data = image_hdu.header, image_hdu.data
 
-        plt.imshow(fits_data)
-        plt.savefig(image_path)
+        # could look at handling BLANK
+        # https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf pg. 14
+        # only one case in example set
+
+        subplot_kw = {}
+        has_wcs = False
+        if "WCSAXES" in image_header or "CRPIX1" in image_header:
+            wcs = WCS(image_header)
+            subplot_kw["projection"] = wcs
+            has_wcs = True
+
+        fig, ax = plt.subplots(subplot_kw=subplot_kw)
+        im = ax.imshow(image_data)
+        cbar = fig.colorbar(im, label=image_header.get("BUNIT"))
+        cbar.minorticks_off()  # override generic yaxis settings
+
+        if has_wcs:
+            apply_tick_styles(ax.coords[0], "x", mpl.rcParams)
+            apply_tick_styles(ax.coords[1], "y", mpl.rcParams)
+
+        if (
+            has_wcs
+            and "BMAJ" in image_header
+            and "BMIN" in image_header
+            and "BPA" in image_header
+        ):
+            wcsaxes.add_beam(ax, header=image_header, fc="k")
+
+        fig.savefig(tree.abs_leaf_path(image_uuid))
+        plt.close(fig)
 
 
-def get_md_content(
-    md_uuid: str,
-    fits_uuid: str,
-    tree: TreeSpan,
-    image_suffix: str,
-    jinja_variables: dict[str, Any],
-) -> str:
-    """Get the content for the Markdown preview page."""
-    fits_path = tree.leaves["initial_path"][md_uuid]
-    download_filename = tree.leaves["initial_path"][fits_uuid].name
-    fits_data, fits_header = fits.getdata(fits_path, header=True)
-
-    data_type = "Unknown"
-    if fits_data.size > 0:
-        data_type = str(type(fits_data.flatten()[0])).split("'")[1]
-
-    jinja_environment = Environment(
-        loader=FileSystemLoader(tree.config.template_directories),
-        lstrip_blocks=True,
-        trim_blocks=True,  # stops Jinja lines from being replaced with newlines
-        # if not enabled, Marko doesn't recognize the table as being a single HTMLBlock
-    )
-
-    template = jinja_environment.get_template("preview-fits.md.jinja")
-
-    return template.render(
-        download_filename=download_filename,
-        img_src="./" + fits_path.with_suffix(image_suffix).name,
-        img_shape=fits_data.shape,
-        data_type=data_type,
-        fits_filesize=fits_path.stat().st_size,
-        fits_header=fits_header,
-        cambium_wrap=WrappedBlocksMixin.wrap_anything,
-        **jinja_variables,
+def apply_tick_styles(
+    axis: wcsaxes.CoordinateHelper, which: Literal["x", "y"], rc_params: mpl.RcParams
+) -> None:
+    """Override WCS tick styling with the loaded styles."""
+    generic = {
+        key.removeprefix(f"{which}tick."): value
+        for key, value in rc_params.find_all(f"{which}tick\\.(?!major|minor)").items()
+    }
+    tick_major = {
+        key.removeprefix(f"{which}tick.major."): value
+        for key, value in rc_params.find_all(f"{which}tick.major").items()
+    }
+    axis.tick_params(which="major", **{**generic, **tick_major})
+    axis.tick_params(
+        which="minor",
+        length=rc_params.find_all(f"{which}tick.minor.size")[f"{which}tick.minor.size"],
     )
