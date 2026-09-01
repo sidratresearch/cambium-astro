@@ -29,6 +29,7 @@ class PreviewFITSConfig(StageConfig):
     disable_paths: list[str] = []
     image_filetype: str = "png"
     max_preview_rows: PositiveInt | None = 10
+    mplstyle_path: Path | None = None
 
 
 class UUIDMapping(TypedDict):
@@ -194,9 +195,7 @@ class PreviewFITS2(Stage):
         self.css_file = "css/preview_fits.css"
         # path from includes/static to the CSS file we want to import on preview pages
         self.style_directory = Path(__file__).parent / "mplstyle"
-        style_path = self.style_directory / "maple.mplstyle"
-        plt.style.use(style_path)
-        self.rc_params = mpl.rc_params_from_file(style_path)
+        self.mpl_style_paths = [self.style_directory / "maple.mplstyle"]
 
         # store the files we'll operate on
         self.preview_objs: list[_Preview] = []
@@ -213,19 +212,13 @@ class PreviewFITS2(Stage):
         )
         self.css_link = static_dir / self.css_file
 
+        self._setup_matplotlib(tree)
+
         # get jinja template
         jinja_environment = make_jinja_environment(tree)
         self.md_template = jinja_environment.get_template(
             "PreviewFITS-preview-page.html.jinja"
         )
-
-        # load fonts into matplotlib
-        font_directories = [self.style_directory] + [
-            d for d, _ in tree.config.static_directories["theme"]
-        ]
-        font_files = mpl.font_manager.findSystemFonts(fontpaths=font_directories)
-        for font_file in font_files:
-            mpl.font_manager.fontManager.addfont(font_file)
 
         # cast the deque to a list so that we can add new leaves to the end
         # we don't want to re-visit the added leaves anyway
@@ -243,6 +236,25 @@ class PreviewFITS2(Stage):
         preview = _Preview(fits_initial_path, md_uuid, self, tree)
         preview.update_uuid_mapping(len(self.preview_objs), self)
         self.preview_objs.append(preview)
+
+    def _setup_matplotlib(self, tree: TreeSpan) -> None:
+        # load fonts into matplotlib
+        font_directories = [self.style_directory] + [
+            d for d, _ in tree.config.static_directories["theme"]
+        ]
+        font_files = mpl.font_manager.findSystemFonts(fontpaths=font_directories)
+        for font_file in font_files:
+            mpl.font_manager.fontManager.addfont(font_file)
+
+        # load style files
+        if self.config.mplstyle_path is not None:
+            style_path = tree.root_directory / self.config.mplstyle_path
+            if not style_path.exists():
+                raise FileNotFoundError(
+                    f"Matplotlib style file `{self.config.mplstyle_path}` not found in {tree.root_directory.absolute()}"
+                )
+            self.mpl_style_paths.append(style_path)
+        plt.style.use(self.mpl_style_paths)
 
     # --------------------------------------------------------------------#
     #                         Pre hook + helpers                          #
@@ -345,8 +357,8 @@ class PreviewFITS2(Stage):
         cbar.minorticks_off()  # override generic yaxis settings
 
         if has_wcs:
-            apply_tick_styles(ax.coords[0], "x", self.rc_params)
-            apply_tick_styles(ax.coords[1], "y", self.rc_params)
+            apply_tick_styles(ax.coords[0], "x", mpl.rcParams)
+            apply_tick_styles(ax.coords[1], "y", mpl.rcParams)
 
         if (
             has_wcs
