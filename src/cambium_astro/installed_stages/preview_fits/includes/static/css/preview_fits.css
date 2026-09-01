@@ -1,7 +1,4 @@
 div.cambium-PreviewFITS {
-  h1 {
-    font-size: 1.5rem;
-  }
   h2 {
     margin-top: 1rem;
   }
@@ -13,6 +10,16 @@ div.cambium-PreviewFITS {
 
   table {
     min-width: 15rem;
+  }
+
+  div.cambium-PreviewFITS-summary {
+    background-color: #eee;
+    padding: 1rem;
+
+    ol {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
   }
 
   a.cambium-PreviewFITS-download-link {
