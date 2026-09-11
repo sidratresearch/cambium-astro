@@ -1,4 +1,7 @@
 div.cambium-PreviewFITS {
+  h1 {
+    word-break: break-all;
+  }
   h2 {
     margin-top: 1rem;
   }

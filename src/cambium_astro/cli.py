@@ -9,7 +9,7 @@ def main() -> None:
     """Replacement for the `cambium` command which enables astro-specific stages
     by default."""
     default_stages = config.FileConfiguration().stages
-    new_default_stages = ["cambium_astro.PreviewFITS2", *default_stages]
+    new_default_stages = ["cambium_astro.PreviewFITS", *default_stages]
 
     NewFileConfiguration = create_model(
         "newFileConfiguration",

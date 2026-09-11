@@ -1,0 +1,2 @@
+{% from "PreviewFITS-fits-table.html.jinja" import fits_data_table %}
+{{ cambium_wrap(fits_data_table(hdu_row["preview_data"]["table_data"], hdu_row["header"], max_preview_rows),"table") }}

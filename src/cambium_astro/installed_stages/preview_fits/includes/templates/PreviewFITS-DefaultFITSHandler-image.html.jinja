@@ -1,0 +1,7 @@
+{% macro fits_image(index, hdu_row, download_info) -%}
+  <img
+    src="{{ hdu_row['preview_data']['image_path'] }}"
+    alt="Preview of {{ download_info['link'] }} HDU {{ index }}"
+  />
+{%- endmacro %}
+{{ cambium_wrap(fits_image(loop.index0, hdu_row, download_info), "img") }}
