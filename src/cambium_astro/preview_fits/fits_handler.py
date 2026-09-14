@@ -321,24 +321,23 @@ def _make_wcs_image(path: Path, image_data: np.ndarray, header: fits.Header) -> 
 
 
 def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -> None:
-    target_header = fits.Header.fromstring(
-        """
-NAXIS   =                    2
-NAXIS1  =                  480
-NAXIS2  =                  240
-CTYPE1  = 'RA---MOL'
-CRPIX1  =                240.5
-CRVAL1  =                180.0
-CDELT1  =               -0.675
-CUNIT1  = 'deg     '
-CTYPE2  = 'DEC--MOL'
-CRPIX2  =                120.5
-CRVAL2  =                  0.0
-CDELT2  =                0.675
-CUNIT2  = 'deg     '
-COORDSYS= 'icrs    '
-""",
-        sep="\n",
+    target_header = fits.Header(
+        {
+            "NAXIS": 2,
+            "NAXIS1": 480,
+            "NAXIS2": 240,
+            "CTYPE1": "RA---MOL",
+            "CRPIX1": 240.5,
+            "CRVAL1": 180.0,
+            "CDELT1": -0.675,
+            "CUNIT1": "deg",
+            "CTYPE2": "DEC--MOL",
+            "CRPIX2": 120.5,
+            "CRVAL2": 0.0,
+            "CDELT2": 0.675,
+            "CUNIT2": "deg",
+            "COORDSYS": "icrs",
+        }
     )
     # HACK - assuming G (galactic) coords if the file doesn't already have anything
     if "COORDSYS" not in hdu.header:
@@ -363,6 +362,8 @@ COORDSYS= 'icrs    '
     fig, axs = plt.subplots(
         nrows=len(images),
         subplot_kw={"projection": wcs, "frame_class": wcsaxes.frame.EllipticalFrame},
+        # for some reason figsize is required to not push the axes to the far right
+        figsize=(6, len(images) * 2.5),
     )
     if len(images) == 1:
         axs = [axs]
@@ -373,12 +374,12 @@ COORDSYS= 'icrs    '
         unit = hdu.header.get(f"TUNIT{i+1}")
         if unit is not None:
             label = f"{label}\n({unit})"
-        cbar = fig.colorbar(im, ax=ax, label=label)
+        cbar = fig.colorbar(im, ax=ax, label=label, pad=0.1)
         cbar.minorticks_off()  # override generic yaxis settings
         apply_tick_styles(ax.coords[0], "x", mpl.rcParams)
         apply_tick_styles(ax.coords[1], "y", mpl.rcParams)
 
-    fig.savefig(path)
+    fig.savefig(path, bbox_inches="tight")  # avoid extra space from the preset figsize
     plt.close(fig)
 
 
