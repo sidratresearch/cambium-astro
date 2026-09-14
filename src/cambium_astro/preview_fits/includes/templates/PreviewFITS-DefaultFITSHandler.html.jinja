@@ -11,7 +11,7 @@
 {% macro hdu_anchor(index) -%}
   {{ "hdu-" ~ index }}
 {%- endmacro %}
-<link rel="stylesheet" href="{{ relative_path_modifier }}{{ css_link }}" />
+
 <div class="cambium-PreviewFITS">
   <h1>{{ download_info["link"] }}</h1>
 
@@ -30,16 +30,6 @@
       <h2 id="{{ hdu_anchor(loop.index0) }}">{{ loop.index0 ~ ": " ~ hdu_name(hdu_row) }}</h2>
 
       {% include hdu_row["preview_template"] %}
-
-      {#
-      {% if hdu_row["preview_type"] == "image" %}
-        {{ cambium_wrap(fits_image(loop.index0, hdu_row, download_info), "img") }}
-      {% elif hdu_row["preview_type"] == "table" %}
-        {{ cambium_wrap(fits_data_table(hdu_row["table_data"], hdu_row["header"], max_preview_rows),"table") }}
-      {% else %}
-        No preview available for this HDU.
-      {% endif %}
-      #}
 
       <details>
         <summary>View Header</summary>

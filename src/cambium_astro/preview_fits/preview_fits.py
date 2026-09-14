@@ -149,9 +149,13 @@ class PreviewFITS(Stage):
     def pre_hook(self, leaf_uuid: str, tree: TreeSpan) -> None:
         file_info = self.full_uuid_mapping[leaf_uuid]
 
-        # don't run anything for FITS or image files
+        # don't run anything for (what will become) FITS or image files
         if file_info is None:
             return
 
         handler_instance = self.fits_handlers[file_info.preview_handler_name]
         handler_instance.write_files(file_info, self.config.max_preview_rows, tree)
+
+        # TODO: make css file come from the handler? then different handlers need
+        # to have different CSS files, ideally without copying all of them into _build
+        self._set_css_include(self.css_file, file_info.preview_page_uuid, tree)
