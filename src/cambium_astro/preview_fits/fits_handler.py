@@ -189,7 +189,12 @@ def get_hdu_preview_info(
 
         case "image":
             image_uuid = fits_info.hdu_index_to_image_uuid[index]
-            make_image(abs_leaf_path(tree, image_uuid), hdu)
+            make_image(
+                abs_leaf_path(tree, image_uuid),
+                hdu,
+                initial_path=fits_info.initial_fits_path,
+            )
+
             jinja_preview_data = {
                 "image_path": fits_info.image_uuids_to_filenames[image_uuid]
             }
@@ -258,14 +263,16 @@ def make_image_filename(
     return f"{image_name}.{image_extension}"
 
 
-def make_image(path: Path, hdu: fits.ImageHDU | fits.TableHDU) -> None:
+def make_image(
+    path: Path, hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
+) -> None:
     """Make a preview image with matplotlib.
 
     Accounts for WCS and HEALPix where relevant.
     """
     header, data = hdu.header, hdu.data
     if header.get("XTENSION") == "BINTABLE" and header.get("PIXTYPE") == "HEALPIX":
-        _make_healpix_image(path, hdu)
+        _make_healpix_image(path, hdu, initial_path)
         return
 
     if header.get("WCSAXES") == 2 or "CRPIX1" in header:
@@ -313,7 +320,7 @@ def _make_wcs_image(path: Path, image_data: np.ndarray, header: fits.Header) -> 
     plt.close(fig)
 
 
-def _make_healpix_image(path: Path, hdu: fits.BinTableHDU) -> None:
+def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -> None:
     target_header = fits.Header.fromstring(
         """
 NAXIS   =                    2
@@ -336,9 +343,8 @@ COORDSYS= 'icrs    '
     # HACK - assuming G (galactic) coords if the file doesn't already have anything
     if "COORDSYS" not in hdu.header:
         hdu.header["COORDSYS"] = "G"
-        # TODO: should be using FITS file path
         logger.warning(
-            f"Assuming galactic coordinates for HEALPix file {path} without COORDSYS keyword"
+            f"Assuming galactic coordinates for HEALPix file {initial_path} without COORDSYS keyword"
         )
 
     images = []
@@ -347,8 +353,7 @@ COORDSYS= 'icrs    '
             image_data, _ = reproject_from_healpix(hdu, target_header, field=i)
             images.append(image_data)
     except Exception as e:
-        # TODO: figuare out how to change to fits path
-        logger.warning(f"Error when creating preview HEALPix file {path}: {e}")
+        logger.warning(f"Error when creating preview HEALPix file {initial_path}: {e}")
         path.touch()
         return
 
@@ -389,7 +394,15 @@ def apply_tick_styles(
         key.removeprefix(f"{which}tick.major."): value
         for key, value in rc_params.find_all(f"{which}tick.major").items()
     }
-    axis.tick_params(which="major", **{**generic, **tick_major})
+    options = {**generic, **tick_major}
+
+    # don't try to edit cardinal axes on elliptical frame plots
+    if axis.get_axislabel_position()[0] in ["c", "h"]:
+        for key in ["bottom", "top", "left", "right"]:
+            options.pop(key, None)
+            options.pop(f"label{key}", None)
+
+    axis.tick_params(which="major", **options)
     axis.tick_params(
         which="minor",
         length=rc_params.find_all(f"{which}tick.minor.size")[f"{which}tick.minor.size"],
