@@ -18,7 +18,7 @@ from jinja2 import Environment
 from matplotlib import pyplot as plt
 from reproject import reproject_from_healpix
 
-from .abs_fits_handler import BaseFITSFileInfo, FITSHandler, SingleHDUInfo, UUIDMapping
+from ._fits_handler import BaseFITSFileInfo, FITSHandler, SingleHDUInfo, UUIDMapping
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class DefaultFITSHandler(FITSHandler):
 
     def post_init(self, jinja_environment: Environment, _: TreeSpan) -> None:
         self.jinja_template = jinja_environment.get_template(
-            "PreviewFITS-DefaultFITSHandler.html.jinja"
+            "DefaultFITSHandler/PreviewFITS-DefaultFITSHandler.html.jinja"
         )
 
     def matches_file(self, _: list[SingleHDUInfo]) -> bool:
@@ -209,7 +209,7 @@ def get_hdu_preview_info(
         index=index,
         class_name=type(hdu).__name__,
         header=header,
-        preview_template=jinja_preview_template,
+        preview_template=f"DefaultFITSHandler/{jinja_preview_template}",
         preview_data=jinja_preview_data,
     )
 

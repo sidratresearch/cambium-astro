@@ -17,8 +17,8 @@ from cambium.utils.path_utils import (
 )
 from pydantic import PositiveInt
 
-from .abs_fits_handler import SingleHDUInfo, UUIDMapping
-from .fits_handler import DefaultFITSHandler
+from ._fits_handler import SingleHDUInfo, UUIDMapping
+from .default_fits_handler import DefaultFITSHandler
 
 logger = logging.getLogger(__name__)
 FITS_FILE_EXTENSIONS = ["fits", "fit"]
