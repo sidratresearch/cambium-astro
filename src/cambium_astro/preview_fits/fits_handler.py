@@ -47,6 +47,7 @@ class DFH_FITSFileInfo(BaseFITSFileInfo):
         if preview_type == "image":
             self.image_uuids_to_filenames[image_uuid] = image_filename
             self.hdu_index_to_image_uuid[index] = image_uuid
+            self.image_uuids.append(image_uuid)
 
 
 class _JinjaHDUInfo(TypedDict):

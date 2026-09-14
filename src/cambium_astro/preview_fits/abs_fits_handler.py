@@ -49,6 +49,7 @@ class BaseFITSFileInfo:
         self.preview_page_uuid = preview_page_uuid
         self.n_hdus = n_hdus
         self.preview_handler_name = preview_handler_name
+        self.image_uuids = []
 
 
 UUIDMapping = dict[str, None | BaseFITSFileInfo]

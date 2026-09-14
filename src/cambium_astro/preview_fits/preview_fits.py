@@ -10,17 +10,15 @@ from cambium.stage import Stage, StageConfig
 from cambium.tree import TreeSpan
 from cambium.utils.other_utils import make_jinja_environment
 from cambium.utils.path_utils import (
+    abs_leaf_path,
     abs_static_stage_path,
     path_matches_patterns,
     sort_user_paths,
 )
 from pydantic import PositiveInt
 
-from .fits_handler import (
-    DefaultFITSHandler,
-    SingleHDUInfo,
-    UUIDMapping,
-)
+from .abs_fits_handler import SingleHDUInfo, UUIDMapping
+from .fits_handler import DefaultFITSHandler
 
 logger = logging.getLogger(__name__)
 FITS_FILE_EXTENSIONS = ["fits", "fit"]
@@ -159,3 +157,14 @@ class PreviewFITS(Stage):
         # TODO: make css file come from the handler? then different handlers need
         # to have different CSS files, ideally without copying all of them into _build
         self._set_css_include(self.css_file, file_info.preview_page_uuid, tree)
+
+        for uuid in (
+            file_info.fits_file_uuid,
+            file_info.preview_page_uuid,
+            *file_info.image_uuids,
+        ):
+            tmp_path = abs_leaf_path(tree, uuid)
+            if not tmp_path.exists():
+                raise RuntimeError(
+                    f"{file_info.preview_handler_name} failed to create the file {tmp_path}"
+                )
