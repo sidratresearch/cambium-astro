@@ -8,7 +8,7 @@ import matplotlib as mpl
 from astropy.io import fits
 from cambium.stage import Stage, StageConfig
 from cambium.tree import TreeSpan
-from cambium.utils.other_utils import make_jinja_environment
+from cambium.utils.other_utils import get_all_subclasses, make_jinja_environment
 from cambium.utils.path_utils import (
     abs_leaf_path,
     abs_static_stage_path,
@@ -17,7 +17,7 @@ from cambium.utils.path_utils import (
 )
 from pydantic import PositiveInt
 
-from ._fits_handler import SingleHDUInfo, UUIDMapping
+from ._fits_handler import FITSHandler, SingleHDUInfo, UUIDMapping
 from .default_fits_handler import DefaultFITSHandler
 
 logger = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ class PreviewFITSConfig(StageConfig):
     image_filetype: str = "png"
     max_preview_rows: PositiveInt | None = 10
     mplstyle_path: Path | None = None
+    FITS_handlers: list[str] = []
 
 
 def _fits_path_updater(fits_path: Path) -> Path:
@@ -59,7 +60,15 @@ class PreviewFITS(Stage):
         self.style_directory = Path(__file__).parent / "mplstyle"
         self.mpl_style_paths = [self.style_directory / "maple.mplstyle"]
 
-        self.fits_handlers = {"DefaultFITSHandler": DefaultFITSHandler()}
+        # build an ordered dict of FITSHandlers
+        all_handlers = {cls.__name__: cls() for cls in get_all_subclasses(FITSHandler)}
+        self.fits_handlers: dict[str, FITSHandler] = {}
+        for handler_name in self.config.FITS_handlers:
+            if handler_name in all_handlers:
+                self.fits_handlers[handler_name] = all_handlers[handler_name]
+            else:
+                raise RuntimeError(f"Unknown FITS handler {handler_name}")
+        self.fits_handlers["DefaultFITSHandler"] = DefaultFITSHandler()
 
         self.full_uuid_mapping: UUIDMapping = {}
 
