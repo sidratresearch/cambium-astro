@@ -1,0 +1,113 @@
+{# 
+  Macros with names that start with underscores are helpers
+  Others are meant to be imported and used in other files
+#}
+
+{% macro _get_column_name(index, table_header) -%}
+  {% set column_name = "Column" ~ (index+1) %}
+  {% set name_key, unit_key = "TTYPE"~(index+1), "TUNIT"~(index+1) %}
+  {% if table_header[name_key] is defined and table_header[name_key]|length>0 %}
+    {% set column_name = table_header[name_key] %}
+  {% endif %}
+  {% if table_header[unit_key] is defined and table_header[unit_key]|length>0 %}
+    {% set column_name = column_name ~ " (" ~ table_header[unit_key] ~")" %}
+  {% endif %}
+  {{ column_name }}
+{%- endmacro %}
+
+{% macro fits_data_table(table_data, table_header, max_preview_rows) -%}
+  {# Display tabular data  #}
+  {% set truncated, total_rows = False, table_data|length %}
+  {% set num_cols = table_header["TFIELDS"] %}
+  {% if max_preview_rows != none and table_data|length > max_preview_rows %}
+    {% set table_data = table_data[:max_preview_rows] %}
+    {% set truncated = true %}
+  {% endif %}
+  <table>
+    <caption>
+      Data (showing 1-{{ table_data|length }} of {{ total_rows }} rows)
+    </caption>
+    <thead>
+      <tr>
+        {% for i in range(num_cols) %}
+          <th>{{ _get_column_name(i, table_header) }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in table_data %}
+        <tr>
+          {% for cell in row %}
+            <td>{{ cell }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      {% if truncated %}
+        <tr>
+          {% for i in range(num_cols) %}
+            <td>...</td>
+          {% endfor %}
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+{%- endmacro %}
+
+{% macro fits_header_table(header_obj) -%}
+  {# Show a FITS header as a <table> #}
+  <table>
+    <caption>
+      Header
+    </caption>
+    <thead>
+      <tr>
+        {# Technically the align keyword is deprecated, but Marko uses it and we have CSS that selects it #}
+        {# So this doesn't actually rely on browser rendering #}
+        <th align="left">Key</th>
+        <th align="left">Value</th>
+        <th align="left">Comment</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key, value in header_obj|items %}
+        {% set comment =  header_obj.comments[key] %}
+        {% if key|length>0 or value|length>0 or comment|length>0 %}
+          <tr>
+            <td align="left">{{ key }}</td>
+            <td align="left">{{ value }}</td>
+            <td align="left">{{ comment }}</td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+{%- endmacro %}
+
+{% macro download_link(download_info) -%}
+  {# Link to download the FITS file. Includes a download icon and the filesize. #}
+  <a href="./{{ download_info["link"] }}" class="cambium-PreviewFITS-download-link">
+    Download ({{ download_info["size"]|filesizeformat }})
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" fill="currentColor">
+      <!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+      <!-- classic/solid/download -->
+      <path
+        d="M352 96C352 78.3 337.7 64 320 64C302.3 64 288 78.3 288 96L288 306.7L246.6 265.3C234.1 252.8 213.8 252.8 201.3 265.3C188.8 277.8 188.8 298.1 201.3 310.6L297.3 406.6C309.8 419.1 330.1 419.1 342.6 406.6L438.6 310.6C451.1 298.1 451.1 277.8 438.6 265.3C426.1 252.8 405.8 252.8 393.3 265.3L352 306.7L352 96zM160 384C124.7 384 96 412.7 96 448L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 448C544 412.7 515.3 384 480 384L433.1 384L376.5 440.6C345.3 471.8 294.6 471.8 263.4 440.6L206.9 384L160 384zM464 440C477.3 440 488 450.7 488 464C488 477.3 477.3 488 464 488C450.7 488 440 477.3 440 464C440 450.7 450.7 440 464 440z"
+      />
+    </svg>
+  </a>
+{%- endmacro %}
+
+{% macro hdu_name(hdu) -%}
+  {# Get a "name" for an HDU from it's type and EXTNAME if any #}
+  {% set name =   hdu["class_name"] %}
+  {% set header = hdu["header"] %}
+  {% if header["EXTNAME"] is defined and header["EXTNAME"]|length>0 %}
+    {% set name = name ~ " — "~ header["EXTNAME"] %}
+  {% endif %}
+  {{ name }}
+{%- endmacro %}
+
+{% macro hdu_anchor(index) -%}
+  {# Standardized way to get an anchor (href) for an HDU #}
+  {{ "hdu-" ~ index }}
+{%- endmacro %}

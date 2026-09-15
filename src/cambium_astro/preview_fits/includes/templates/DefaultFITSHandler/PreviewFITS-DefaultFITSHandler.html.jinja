@@ -1,40 +1,32 @@
-{% from "PreviewFITS-fits-header.html.jinja" import fits_header_table %}
-{% macro hdu_name(hdu_row) -%}
-  {% set name =   hdu_row["class_name"] %}
-  {% set header = hdu_row["header"] %}
-  {% if header["EXTNAME"] is defined and header["EXTNAME"]|length>0 %}
-    {% set name = name ~ " — "~ header["EXTNAME"] %}
-  {% endif %}
-  {{ name }}
-{%- endmacro %}
+{% from "PreviewFITS-macros.html.jinja" import fits_header_table, hdu_name, hdu_anchor, download_link %}
 
-{% macro hdu_anchor(index) -%}
-  {{ "hdu-" ~ index }}
+{% macro hdu_row(index, hdu) -%}
+  <div class="cambium-PreviewFITS-row">
+    <h2 id="{{ hdu_anchor(index) }}">{{ index ~ ": " ~ hdu_name(hdu) }}</h2>
+
+    {% include hdu["preview_template"] %}
+
+    <details>
+      <summary>View Header</summary>
+      {{ cambium_wrap(fits_header_table(hdu["header"])|trim , "table") }}
+    </details>
+  </div>
 {%- endmacro %}
 
 <div class="cambium-PreviewFITS">
   <h1>{{ download_info["link"] }}</h1>
 
   <div class="cambium-PreviewFITS-summary">
-    <p>{% include "PreviewFITS-download-link.html.jinja" %}</p>
+    <p>{{ download_link(download_info) }}</p>
     <h2>Contents</h2>
     <ol start="0">
-      {% for hdu_row in hdu_data %}
-        <li><a href="#{{ hdu_anchor(loop.index0) }}">{{ hdu_name(hdu_row) }}</a></li>
+      {% for hdu in hdu_data %}
+        <li><a href="#{{ hdu_anchor(loop.index0) }}">{{ hdu_name(hdu) }}</a></li>
       {% endfor %}
     </ol>
   </div>
 
-  {% for hdu_row in hdu_data %}
-    <div class="cambium-PreviewFITS-row">
-      <h2 id="{{ hdu_anchor(loop.index0) }}">{{ loop.index0 ~ ": " ~ hdu_name(hdu_row) }}</h2>
-
-      {% include hdu_row["preview_template"] %}
-
-      <details>
-        <summary>View Header</summary>
-        {{ cambium_wrap(fits_header_table(hdu_row["header"])|trim , "table") }}
-      </details>
-    </div>
+  {% for hdu in hdu_data %}
+    {{ hdu_row(loop.index0, hdu) }}
   {% endfor %}
 </div>
