@@ -1,0 +1,36 @@
+{% from "PreviewFITS-macros.html.jinja" import hdu_name, hdu_anchor, fits_header_table, download_link %}
+
+{% macro hdu_row(index, hdu) -%}
+  <div class="cambium-PreviewFITS-row">
+    <h2 id="{{ hdu_anchor(index) }}">{{ index ~ ": " ~ hdu_name(hdu) }}</h2>
+
+    {% include hdu["preview_template"] %}
+
+    <details>
+      <summary>View Header</summary>
+      {{ cambium_wrap(fits_header_table(hdu["header"])|trim , "table") }}
+    </details>
+  </div>
+{%- endmacro %}
+
+<div class="cambium-PreviewFITS">
+  <h1>{{ download_info["link"] }}</h1>
+
+  <div class="cambium-PreviewFITS-summary">
+    <p>{{ download_link(download_info) }}</p>
+    <h2>Contents</h2>
+    <ol>
+      {% for hdu in hdu_data[1:] %}
+        <li><a href="#{{ hdu_anchor(loop.index0) }}">{{ hdu_name(hdu) }}</a></li>
+      {% endfor %}
+      <li value="0"><a href="#{{ hdu_anchor(0) }}">{{ hdu_name(hdu_data[0]) }}</a></li>
+    </ol>
+  </div>
+
+  {# Show all non-primary HDUs #}
+  {% for hdu in hdu_data[1:] %}
+    {{ hdu_row(loop.index, hdu) }}
+  {% endfor %}
+  {# End with the primary HDU #}
+  {{ hdu_row(0, hdu_data[0]) }}
+</div>

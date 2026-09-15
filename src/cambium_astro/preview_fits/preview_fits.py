@@ -17,8 +17,7 @@ from cambium.utils.path_utils import (
 )
 from pydantic import PositiveInt
 
-from ._fits_handler import FITSHandler, SingleHDUInfo, UUIDMapping
-from .default_fits_handler import DefaultFITSHandler
+from .fits_handlers import DefaultFITSHandler, FITSHandler, SingleHDUInfo, UUIDMapping
 
 logger = logging.getLogger(__name__)
 FITS_FILE_EXTENSIONS = ["fits", "fit"]
@@ -35,7 +34,7 @@ class PreviewFITSConfig(StageConfig):
     image_filetype: str = "png"
     max_preview_rows: PositiveInt | None = 10
     mplstyle_path: Path | None = None
-    FITS_handlers: list[str] = []
+    FITS_handlers: list[str] = ["ReversedFITSHandler"]
 
 
 def _fits_path_updater(fits_path: Path) -> Path:
@@ -160,6 +159,9 @@ class PreviewFITS(Stage):
         if file_info is None:
             return
 
+        logger.debug(
+            f"Previewing {file_info.initial_fits_path} with {file_info.preview_handler_name}"
+        )
         handler_instance = self.fits_handlers[file_info.preview_handler_name]
         handler_instance.write_files(file_info, self.config.max_preview_rows, tree)
 
