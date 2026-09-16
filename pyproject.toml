@@ -1,6 +1,13 @@
+[build-system]
+build-backend = "poetry_dynamic_versioning.backend"
+requires = [ "poetry-core>=1", "poetry-dynamic-versioning>=1,<2" ]
+
 [project]
 name = "cambium-astro"
 description = "Astronomy-related stages for Cambium"
+readme = "README.md"
+license = "MIT"
+license-files = [ "LICEN[CS]E*" ]
 authors = [
   { name = "Sidrat Research", email = "info@sidratresearch.com" },
   { name = "Mubdi Rahman", email = "mubdi@sidratresearch.com" },
@@ -8,16 +15,26 @@ authors = [
   { name = "Hansen Jiang", email = "hansen@sidratresearch.com" },
   { name = "Jennifer Scora", email = "jscora@sidratresearch.com" },
 ]
-readme = "README.md"
 requires-python = ">=3.11,<4.0"
-dependencies = [
-  "cambium>=0.6.0",
-  "astropy (>=8.0.1,<9.0.0)",
-  "matplotlib (>=3.11.1,<4.0.0)",
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Astronomy",
 ]
-dynamic = ["version"]
-license = "MIT"
-license-files = ["LICEN[CS]E*"]
+dynamic = [ "version" ]
+dependencies = [
+  "astropy>=8.0.1,<9",
+  "cambium>=0.6",
+  "matplotlib>=3.11.1,<4",
+]
+urls.Homepage = "https://github.com/sidratresearch/cambium-astro"
+urls.Issues = "https://github.com/sidratresearch/cambium-astro/issues"
 scripts.cambium-astro = "cambium_astro.cli:main"
 
 [dependency-groups]
@@ -32,12 +49,9 @@ dev = [
 
 [tool.poetry]
 version = "0.0.0"
-
-[tool.poetry.requires-plugins]
-poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+requires-plugins.poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = [
+  "plugin",
+] }
 
 [tool.poetry-dynamic-versioning]
 enable = true
-[build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
-build-backend = "poetry_dynamic_versioning.backend"
