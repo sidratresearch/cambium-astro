@@ -14,6 +14,7 @@ def main() -> None:
     NewFileConfiguration = create_model(
         "newFileConfiguration",
         stages=(list[str] | None, new_default_stages),
+        extensions=(list[str] | None, ["cambium_astro"]),
         __base__=config.FileConfiguration,
     )
     config.FileConfiguration = NewFileConfiguration
