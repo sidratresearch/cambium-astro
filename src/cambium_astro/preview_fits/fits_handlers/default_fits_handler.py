@@ -69,7 +69,8 @@ class DefaultFITSHandler(FITSHandler):
             "DefaultFITSHandler/PreviewFITS-DefaultFITSHandler.html.jinja"
         )
 
-    def matches_file(self, _: list[SingleHDUInfo]) -> bool:
+    @classmethod
+    def matches_file(cls, _: list[SingleHDUInfo]) -> bool:
         """Class matches all files."""
         return True
 

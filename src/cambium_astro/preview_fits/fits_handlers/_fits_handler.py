@@ -59,8 +59,9 @@ UUIDMapping = dict[str, None | BaseFITSFileInfo]
 class FITSHandler(ABC):
     """Abstract base for FITSHandler classes. See DefaultFITSHandler for an example."""
 
+    @classmethod
     @abstractmethod
-    def matches_file(self, hdu_info: list[SingleHDUInfo]) -> bool:
+    def matches_file(cls, hdu_info: list[SingleHDUInfo]) -> bool:
         """Check whether this FITSHandler should be applied to a given FITS file.
 
         `hdu_info` contains the header, HDU number, and HDU type for each HDU in a file
@@ -75,9 +76,10 @@ class FITSHandler(ABC):
         """
         return
 
+    @classmethod
     @abstractmethod
     def make_uuid_mapping(
-        self,
+        cls,
         preview_page_uuid: str,
         hdu_info: list[SingleHDUInfo],
         fits_path: Path,

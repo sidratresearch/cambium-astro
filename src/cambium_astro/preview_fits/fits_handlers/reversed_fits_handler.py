@@ -19,7 +19,8 @@ class ReversedFITSHandler(dfh.DefaultFITSHandler):
             "ReversedFITSHandler/PreviewFITS-ReversedFITSHandler.html.jinja"
         )
 
-    def matches_file(self, hdus: list[SingleHDUInfo]) -> bool:
+    @classmethod
+    def matches_file(cls, hdus: list[SingleHDUInfo]) -> bool:
         """Matches if the PrimaryHDU has no preview-able data."""
         primary_hdu = hdus[0]
         return dfh.choose_preview_type(primary_hdu) == "unavailable"
