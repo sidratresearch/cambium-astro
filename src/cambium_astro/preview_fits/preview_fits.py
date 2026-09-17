@@ -112,7 +112,15 @@ class PreviewFITS(Stage):
         add_leaf = lambda path: self.add_leaf(path, tree)
 
         for handler_instance in self.fits_handlers.values():
-            if handler_instance.__class__.matches_file(hdu_info):
+            try:
+                matches = handler_instance.__class__.matches_file(hdu_info)
+            except Exception as e:
+                h_name = handler_instance.__class__.__name__
+                logger.warning(
+                    f"Error while checking if preview for {fits_path} should be handled by {h_name}. {e}"
+                )
+                continue
+            if matches:
                 uuid_mapping = handler_instance.make_uuid_mapping(
                     preview_page_uuid,
                     hdu_info,
