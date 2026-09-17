@@ -156,7 +156,7 @@ class DefaultFITSHandler(FITSHandler):
         with fits.open(fits_path) as hdu_list:
             for i in range(fits_info.n_hdus):
                 hdu = hdu_list[i]
-                jinja_hdu_info = get_hdu_preview_info(i, hdu, fits_info, tree)
+                jinja_hdu_info = self.get_hdu_preview_info(i, hdu, fits_info, tree)
                 jinja_data.append(jinja_hdu_info)
 
         # write the preview page
@@ -172,47 +172,77 @@ class DefaultFITSHandler(FITSHandler):
 
         abs_leaf_path(tree, fits_info.preview_page_uuid).write_text(replaced)
 
+    def get_hdu_preview_info(
+        self,
+        index: int,
+        hdu: fits.ImageHDU | fits.TableHDU,
+        fits_info: DFH_FITSFileInfo,
+        tree: TreeSpan,
+    ) -> _JinjaHDUInfo:
+        """Extract the Jinja preview info for an HDU, and create an image if necessary."""
+        header, data = hdu.header, hdu.data
 
-def get_hdu_preview_info(
-    index: int,
-    hdu: fits.ImageHDU | fits.TableHDU,
-    fits_info: DFH_FITSFileInfo,
-    tree: TreeSpan,
-) -> _JinjaHDUInfo:
-    """Extract the Jinja preview info for an HDU, and create an image if necessary."""
-    header, data = hdu.header, hdu.data
+        match fits_info.hdu_index_to_preview_type[index]:
+            case "unavailable":
+                jinja_preview_data = {}
+                jinja_preview_template = (
+                    "PreviewFITS-DefaultFITSHandler-unavailable.html.jinja"
+                )
 
-    match fits_info.hdu_index_to_preview_type[index]:
-        case "unavailable":
-            jinja_preview_data = {}
-            jinja_preview_template = (
-                "PreviewFITS-DefaultFITSHandler-unavailable.html.jinja"
-            )
+            case "image":
+                image_uuid = fits_info.hdu_index_to_image_uuid[index]
+                self.make_image(
+                    abs_leaf_path(tree, image_uuid),
+                    hdu,
+                    initial_path=fits_info.initial_fits_path,
+                )
 
-        case "image":
-            image_uuid = fits_info.hdu_index_to_image_uuid[index]
-            make_image(
-                abs_leaf_path(tree, image_uuid),
-                hdu,
-                initial_path=fits_info.initial_fits_path,
-            )
+                jinja_preview_data = {
+                    "image_path": fits_info.image_uuids_to_filenames[image_uuid]
+                }
+                jinja_preview_template = (
+                    "PreviewFITS-DefaultFITSHandler-image.html.jinja"
+                )
 
-            jinja_preview_data = {
-                "image_path": fits_info.image_uuids_to_filenames[image_uuid]
-            }
-            jinja_preview_template = "PreviewFITS-DefaultFITSHandler-image.html.jinja"
+            case "table":
+                jinja_preview_data = {"table_data": data}
+                jinja_preview_template = (
+                    "PreviewFITS-DefaultFITSHandler-table.html.jinja"
+                )
 
-        case "table":
-            jinja_preview_data = {"table_data": data}
-            jinja_preview_template = "PreviewFITS-DefaultFITSHandler-table.html.jinja"
+        return _JinjaHDUInfo(
+            index=index,
+            class_name=type(hdu).__name__,
+            header=header,
+            preview_template=f"DefaultFITSHandler/{jinja_preview_template}",
+            preview_data=jinja_preview_data,
+        )
 
-    return _JinjaHDUInfo(
-        index=index,
-        class_name=type(hdu).__name__,
-        header=header,
-        preview_template=f"DefaultFITSHandler/{jinja_preview_template}",
-        preview_data=jinja_preview_data,
-    )
+    def make_image(
+        self, path: Path, hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
+    ) -> None:
+        """Make a preview image with matplotlib.
+
+        Accounts for WCS and HEALPix where relevant.
+        """
+        header, data = hdu.header, hdu.data
+        if header.get("XTENSION") == "BINTABLE" and header.get("PIXTYPE") == "HEALPIX":
+            _make_healpix_image(path, hdu, initial_path)
+            return
+
+        if header.get("WCSAXES") == 2 or "CRPIX1" in header:
+            _make_wcs_image(path, data, header)
+            return
+
+        if header.get("NAXIS") == 1:
+            _make_line_plot(path, data, header)
+            return
+
+        if header.get("NAXIS") == 2:
+            _make_basic_image(path, data, header)
+            return
+
+        raise RuntimeError(f"Unclear how to make preview image {path}")
 
 
 def choose_preview_type(
@@ -263,33 +293,6 @@ def make_image_filename(
     image_name = "-".join(image_name_parts)
 
     return f"{image_name}.{image_extension}"
-
-
-def make_image(
-    path: Path, hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
-) -> None:
-    """Make a preview image with matplotlib.
-
-    Accounts for WCS and HEALPix where relevant.
-    """
-    header, data = hdu.header, hdu.data
-    if header.get("XTENSION") == "BINTABLE" and header.get("PIXTYPE") == "HEALPIX":
-        _make_healpix_image(path, hdu, initial_path)
-        return
-
-    if header.get("WCSAXES") == 2 or "CRPIX1" in header:
-        _make_wcs_image(path, data, header)
-        return
-
-    if header.get("NAXIS") == 1:
-        _make_line_plot(path, data, header)
-        return
-
-    if header.get("NAXIS") == 2:
-        _make_basic_image(path, data, header)
-        return
-
-    raise RuntimeError(f"Unclear how to make preview image {path}")
 
 
 def _make_basic_image(path: Path, image_data: np.ndarray, header: fits.Header) -> None:

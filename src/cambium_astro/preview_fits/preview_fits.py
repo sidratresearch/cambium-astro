@@ -34,7 +34,10 @@ class PreviewFITSConfig(StageConfig):
     image_filetype: str = "png"
     max_preview_rows: PositiveInt | None = 10
     mplstyle_path: Path | None = None
-    FITS_handlers: list[str] = ["ReversedFITSHandler"]
+    FITS_handlers: list[str] = [
+        "SpectralCubeSumFITSHandler",
+        "ReversedFITSHandler",
+    ]
 
 
 def _fits_path_updater(fits_path: Path) -> Path:

@@ -1,4 +1,4 @@
-"""Default FITSHandler which can work with any FITS file."""
+"""Handler that puts the PrimaryHDU at the bottom."""
 
 import logging
 
