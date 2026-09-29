@@ -106,11 +106,16 @@ class PreviewFITS(Stage):
         self, preview_page_uuid: str, fits_path: Path, tree: TreeSpan
     ) -> None:
         hdu_info = []
-        with fits.open(fits_path) as hdu_list:
-            for i, hdu in enumerate(hdu_list):
-                hdu_info.append(
-                    SingleHDUInfo(index=i, hdu_class=type(hdu), header=hdu.header)
-                )
+        try:
+            with fits.open(fits_path) as hdu_list:
+                for i, hdu in enumerate(hdu_list):
+                    hdu_info.append(
+                        SingleHDUInfo(index=i, hdu_class=type(hdu), header=hdu.header)
+                    )
+        except OSError as e:
+            logger.warning(f"{fits_path} could not be opened for previewing: {e}")
+            # TODO: send this to a "File could not be opened" handler?
+            return
 
         add_leaf = lambda path: self.add_leaf(path, tree)
 
