@@ -108,11 +108,12 @@ class PreviewFITS(Stage):
         hdu_info = []
         try:
             with fits.open(fits_path) as hdu_list:
+                hdu_list.verify("exception")
                 for i, hdu in enumerate(hdu_list):
                     hdu_info.append(
                         SingleHDUInfo(index=i, hdu_class=type(hdu), header=hdu.header)
                     )
-        except OSError as e:
+        except (OSError, fits.VerifyError) as e:
             logger.warning(f"{fits_path} could not be opened for previewing: {e}")
             # TODO: send this to a "File could not be opened" handler?
             return
