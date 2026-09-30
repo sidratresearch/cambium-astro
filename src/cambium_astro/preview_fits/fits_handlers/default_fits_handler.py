@@ -113,7 +113,7 @@ class DefaultFITSHandler(FITSHandler):
         # look through each HDU, store the method by which we want to preview it,
         for single_hdu in hdu_info:
             index = single_hdu.index
-            preview_type = choose_preview_type(single_hdu)
+            preview_type = self.choose_preview_type(single_hdu)
 
             # and create a new leaf for a preview image if necessary
             image_uuid, image_filename = None, None
@@ -223,15 +223,11 @@ class DefaultFITSHandler(FITSHandler):
     ) -> None:
         """Make a preview image with matplotlib.
 
-        Accounts for WCS and HEALPix where relevant.
+        Accounts for HEALPix where relevant.
         """
         header, data = hdu.header, hdu.data
         if header.get("XTENSION") == "BINTABLE" and header.get("PIXTYPE") == "HEALPIX":
             _make_healpix_image(path, hdu, initial_path)
-            return
-
-        if header.get("WCSAXES") == 2 or "CRPIX1" in header:
-            _make_wcs_image(path, data, header)
             return
 
         if header.get("NAXIS") == 1:
@@ -244,36 +240,37 @@ class DefaultFITSHandler(FITSHandler):
 
         raise RuntimeError(f"Unclear how to make preview image {path}")
 
+    @classmethod
+    def choose_preview_type(
+        cls,
+        hdu_info: SingleHDUInfo,
+    ) -> PreviewType:
+        """Inspect an HDU to determine in what way the preview should be displayed."""
+        header = hdu_info.header
+        hdu_classref = hdu_info.hdu_class
 
-def choose_preview_type(
-    hdu_info: SingleHDUInfo,
-) -> PreviewType:
-    """Inspect an HDU to determine in what way the preview should be displayed."""
-    header = hdu_info.header
-    hdu_classref = hdu_info.hdu_class
+        if (  # HEALPix images
+            issubclass(hdu_classref, fits.BinTableHDU)
+            and header.get("PIXTYPE") == "HEALPIX"
+        ):
+            # TODO: should also check anything else that might make generating an image impossible - npix
+            return "image"
 
-    if (  # HEALPix images
-        issubclass(hdu_classref, fits.BinTableHDU)
-        and header.get("PIXTYPE") == "HEALPIX"
-    ):
-        # TODO: should also check anything else that might make generating an image impossible - npix
-        return "image"
+        if (  # regular images (also gets CompImageHDU)
+            issubclass(hdu_classref, (fits.PrimaryHDU, fits.ImageHDU))
+            and header.get("NAXIS") == 2
+            and header.get("NAXIS1", default=0) > 0
+            and header.get("NAXIS2", default=0) > 0
+        ):
+            return "image"
 
-    if (  # regular images (also gets CompImageHDU)
-        issubclass(hdu_classref, (fits.PrimaryHDU, fits.ImageHDU))
-        and header.get("NAXIS") == 2
-        and header.get("NAXIS1", default=0) > 0
-        and header.get("NAXIS2", default=0) > 0
-    ):
-        return "image"
+        if (  # tables
+            issubclass(hdu_classref, (fits.BinTableHDU, fits.TableHDU))
+            and header.get("NAXIS2", default=0) > 0
+        ):
+            return "table"
 
-    if (  # tables
-        issubclass(hdu_classref, (fits.BinTableHDU, fits.TableHDU))
-        and header.get("NAXIS2", default=0) > 0
-    ):
-        return "table"
-
-    return "unavailable"
+        return "unavailable"
 
 
 def make_image_filename(
@@ -297,32 +294,20 @@ def make_image_filename(
 
 def _make_basic_image(path: Path, image_data: np.ndarray, header: fits.Header) -> None:
     """Display a colourmapped array with pixel coordinates."""
-    fig, ax = plt.subplots()
-    im = ax.imshow(image_data)
+    # fig, ax = plt.subplots()
+    fig = plt.figure()
+    ax = fig.add_axes((0.1, 0.1, 0.8, 0.8))
+    im_min, im_max = np.nanpercentile(image_data, [5, 95])
+    im_min, im_max = np.nanpercentile(image_data, [1, 99])
+    im = ax.imshow(image_data, vmin=im_min, vmax=im_max, cmap="cividis")
     cbar = fig.colorbar(im, label=header.get("BUNIT"))
     cbar.minorticks_off()  # override generic yaxis settings
     fig.savefig(path)
-    # print(f"{path} saved as basic image")
     plt.close(fig)
 
 
 def _make_line_plot(path: Path, data: np.ndarray, _: fits.Header) -> None:
     path.touch()
-    # print(f"{path} saved as line image")
-
-
-def _make_wcs_image(path: Path, image_data: np.ndarray, header: fits.Header) -> None:
-    wcs = WCS(header)
-    fig, ax = plt.subplots(subplot_kw={"projection": wcs})
-    im = ax.imshow(image_data)
-    cbar = fig.colorbar(im, label=header.get("BUNIT"))
-    cbar.minorticks_off()  # override generic yaxis settings
-    apply_tick_styles(ax.coords[0], "x", mpl.rcParams)
-    apply_tick_styles(ax.coords[1], "y", mpl.rcParams)
-
-    fig.savefig(path)
-    # print(f"{path} saved as wcs image")
-    plt.close(fig)
 
 
 def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -> None:

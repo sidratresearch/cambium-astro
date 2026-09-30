@@ -35,7 +35,7 @@ class PreviewFITSConfig(StageConfig):
     max_preview_rows: PositiveInt | None = 10
     mplstyle_path: Path | None = None
     FITS_handlers: list[str] = [
-        "SpectralCubeSumFITSHandler",
+        "CubeSumFITSHandler",
         "ReversedFITSHandler",
     ]
 

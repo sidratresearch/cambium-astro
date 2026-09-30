@@ -23,4 +23,4 @@ class ReversedFITSHandler(dfh.DefaultFITSHandler):
     def matches_file(cls, hdus: list[SingleHDUInfo]) -> bool:
         """Matches if the PrimaryHDU has no preview-able data."""
         primary_hdu = hdus[0]
-        return dfh.choose_preview_type(primary_hdu) == "unavailable"
+        return dfh.DefaultFITSHandler.choose_preview_type(primary_hdu) == "unavailable"
