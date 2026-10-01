@@ -299,9 +299,9 @@ def _make_basic_image(path: Path, image_data: np.ndarray, header: fits.Header) -
     ax = fig.add_axes((0.1, 0.1, 0.8, 0.8))
     im_min, im_max = np.nanpercentile(image_data, [1, 99])
     im = ax.imshow(image_data, vmin=im_min, vmax=im_max)
-    cbar = fig.colorbar(im, label=header.get("BUNIT"), extend="both")
+    cbar = fig.colorbar(im, label=header.get("BUNIT"), extend="both", location="bottom", shrink=0.8, aspect=30)
     cbar.minorticks_off()  # override generic yaxis settings
-    fig.savefig(path)
+    fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -364,7 +364,7 @@ def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -
         unit = hdu.header.get(f"TUNIT{i+1}")
         if unit is not None:
             label = f"{label}\n({unit})"
-        cbar = fig.colorbar(im, ax=ax, label=label, pad=0.1, extend="both")
+        cbar = fig.colorbar(im, ax=ax, label=label, pad=0.1, extend="both", location="bottom", shrink=0.8, aspect=30)
         cbar.minorticks_off()  # override generic yaxis settings
         apply_tick_styles(ax.coords[0], "x", mpl.rcParams)
         apply_tick_styles(ax.coords[1], "y", mpl.rcParams)
