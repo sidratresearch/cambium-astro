@@ -32,6 +32,7 @@ dependencies = [
   "astropy>=8.0.1,<9",
   "cambium>=0.6",
   "matplotlib>=3.11.1,<4",
+  "reproject (>=0.21.0,<0.22.0)",
 ]
 urls.Homepage = "https://github.com/sidratresearch/cambium-astro"
 urls.Issues = "https://github.com/sidratresearch/cambium-astro/issues"
@@ -48,10 +49,10 @@ dev = [
 ]
 
 [tool.poetry]
-version = "0.0.0"
 requires-plugins.poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = [
   "plugin",
 ] }
+version = "0.0.0"
 
 [tool.poetry-dynamic-versioning]
 enable = true
