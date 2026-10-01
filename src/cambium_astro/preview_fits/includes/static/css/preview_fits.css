@@ -2,9 +2,6 @@ div.cambium-PreviewFITS {
   h1 {
     word-break: break-all;
   }
-  h2 {
-    /* margin-top: 1rem; */
-  }
 
   div.cambium-img-holder,
   div.cambium-table-holder {
@@ -16,9 +13,6 @@ div.cambium-PreviewFITS {
   }
 
   div.cambium-PreviewFITS-summary {
-    /* background-color: var(--cw-alternate-background-colour); */
-    /* padding: 1rem 0rem; */
-
     h2 {
       font-size: 1em;
       border-top-color: var(--cw-primary-colour);

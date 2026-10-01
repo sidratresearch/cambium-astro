@@ -659,7 +659,7 @@ image.origin: lower # {lower, upper}
 #savefig.dpi:       figure      # figure dots per inch or 'figure'
 #savefig.facecolor: auto        # figure face color when saving
 #savefig.edgecolor: auto        # figure edge color when saving
-#savefig.bbox:      standard    # {tight, standard}
+savefig.bbox: tight # {tight, standard}
 # 'tight' is incompatible with generating frames
 # for animation
 #savefig.pad_inches:  0.1       # padding to be used, when bbox is set to 'tight'
