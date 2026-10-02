@@ -51,6 +51,8 @@ def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -
     fig, axs = plt.subplots(
         nrows=n_images,
     )
+    if n_images == 1:
+        axs = [axs]
 
     for i in range(n_images):
 
