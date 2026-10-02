@@ -1,13 +1,13 @@
 [build-system]
 build-backend = "poetry_dynamic_versioning.backend"
-requires = ["poetry-core>=1", "poetry-dynamic-versioning>=1,<2"]
+requires = [ "poetry-core>=1", "poetry-dynamic-versioning>=1,<2" ]
 
 [project]
 name = "cambium-astro"
 description = "Astronomy-related stages for Cambium"
 readme = "README.md"
 license = "MIT"
-license-files = ["LICEN[CS]E*"]
+license-files = [ "LICEN[CS]E*" ]
 authors = [
   { name = "Sidrat Research", email = "info@sidratresearch.com" },
   { name = "Mubdi Rahman", email = "mubdi@sidratresearch.com" },
@@ -27,15 +27,16 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Astronomy",
 ]
-dynamic = ["version"]
+dynamic = [ "version" ]
 dependencies = [
   "astropy>=8.0.1,<9",
   "cambium>=0.6",
   "matplotlib>=3.11.1,<4",
-  "reproject (>=0.21.0,<0.22.0)",
+  "reproject>=0.21,<0.22",
 ]
 urls.Homepage = "https://www.buildwithcambium.org/"
 urls.Issues = "https://github.com/sidratresearch/cambium-astro/issues"
+urls.Repository = "https://github.com/sidratresearch/cambium-astro"
 scripts.cambium-astro = "cambium_astro.cli:main"
 
 [dependency-groups]
@@ -49,10 +50,10 @@ dev = [
 ]
 
 [tool.poetry]
+version = "0.0.0"
 requires-plugins.poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = [
   "plugin",
 ] }
-version = "0.0.0"
 
 [tool.poetry-dynamic-versioning]
 enable = true
