@@ -6,19 +6,16 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 
-import matplotlib as mpl
 import numpy as np
 from astropy.io import fits
-from astropy.visualization import wcsaxes
-from astropy.wcs import WCS
 from cambium.tree import TreeSpan
 from cambium.utils.md_html_utils import wrap_with_div
 from cambium.utils.path_utils import abs_leaf_path
 from jinja2 import Environment
 from matplotlib import pyplot as plt
-from reproject import reproject_from_healpix
 
 from ._fits_handler import BaseFITSFileInfo, FITSHandler, SingleHDUInfo, UUIDMapping
+from ._make_healpix_image import HEALPIX_AVAILABLE, _make_healpix_image
 
 logger = logging.getLogger(__name__)
 
@@ -253,8 +250,10 @@ class DefaultFITSHandler(FITSHandler):
             issubclass(hdu_classref, fits.BinTableHDU)
             and header.get("PIXTYPE") == "HEALPIX"
         ):
-            # TODO: should also check anything else that might make generating an image impossible - npix
-            return "image"
+            if HEALPIX_AVAILABLE:
+                # TODO: should also check anything else that might make generating an image impossible - npix
+                return "image"
+            return "table"
 
         if (  # regular images (also gets CompImageHDU)
             issubclass(hdu_classref, (fits.PrimaryHDU, fits.ImageHDU))
@@ -314,103 +313,3 @@ def _make_basic_image(path: Path, image_data: np.ndarray, header: fits.Header) -
 
 def _make_line_plot(path: Path, data: np.ndarray, _: fits.Header) -> None:
     path.touch()
-
-
-def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -> None:
-    target_header = fits.Header(
-        {
-            "NAXIS": 2,
-            "NAXIS1": 480,
-            "NAXIS2": 240,
-            "CTYPE1": "RA---MOL",
-            "CRPIX1": 240.5,
-            "CRVAL1": 180.0,
-            "CDELT1": -0.675,
-            "CUNIT1": "deg",
-            "CTYPE2": "DEC--MOL",
-            "CRPIX2": 120.5,
-            "CRVAL2": 0.0,
-            "CDELT2": 0.675,
-            "CUNIT2": "deg",
-            "COORDSYS": "icrs",
-        }
-    )
-    # HACK - assuming G (galactic) coords if the file doesn't already have anything
-    if "COORDSYS" not in hdu.header:
-        hdu.header["COORDSYS"] = "G"
-        logger.warning(
-            f"Assuming galactic coordinates for HEALPix file {initial_path} without COORDSYS keyword"
-        )
-
-    images = []
-    try:
-        for i in range(hdu.header["TFIELDS"]):
-            image_data, _ = reproject_from_healpix(hdu, target_header, field=i)
-            images.append(image_data)
-    except Exception as e:
-        logger.warning(f"Error when creating preview HEALPix file {initial_path}: {e}")
-        path.touch()
-        return
-
-    hdu.header.extend(target_header.cards, update=True)
-
-    wcs = WCS(hdu.header)
-    fig, axs = plt.subplots(
-        nrows=len(images),
-        subplot_kw={"projection": wcs, "frame_class": wcsaxes.frame.EllipticalFrame},
-        # for some reason figsize is required to not push the axes to the far right
-        figsize=(6, len(images) * 2.5),
-    )
-    if len(images) == 1:
-        axs = [axs]
-    for i, image_data in enumerate(images):
-        ax = axs[i]
-        im_min, im_max = np.nanpercentile(image_data, [1, 99])
-        im = ax.imshow(image_data, vmin=im_min, vmax=im_max)
-        label = hdu.header.get(f"TTYPE{i+1}")
-        unit = hdu.header.get(f"TUNIT{i+1}")
-        if unit is not None:
-            label = f"{label}\n({unit})"
-        cbar = fig.colorbar(
-            im,
-            ax=ax,
-            label=label,
-            pad=0.1,
-            extend="both",
-            location="bottom",
-            shrink=0.8,
-            aspect=30,
-        )
-        cbar.minorticks_off()  # override generic yaxis settings
-        apply_tick_styles(ax.coords[0], "x", mpl.rcParams)
-        apply_tick_styles(ax.coords[1], "y", mpl.rcParams)
-
-    fig.savefig(path)  # avoid extra space from the preset figsize
-    plt.close(fig)
-
-
-def apply_tick_styles(
-    axis: wcsaxes.CoordinateHelper, which: Literal["x", "y"], rc_params: mpl.RcParams
-) -> None:
-    """Override WCS tick styling with the loaded styles."""
-    generic = {
-        key.removeprefix(f"{which}tick."): value
-        for key, value in rc_params.find_all(f"{which}tick\\.(?!major|minor)").items()
-    }
-    tick_major = {
-        key.removeprefix(f"{which}tick.major."): value
-        for key, value in rc_params.find_all(f"{which}tick.major").items()
-    }
-    options = {**generic, **tick_major}
-
-    # don't try to edit cardinal axes on elliptical frame plots
-    if axis.get_axislabel_position()[0] in ["c", "h"]:
-        for key in ["bottom", "top", "left", "right"]:
-            options.pop(key, None)
-            options.pop(f"label{key}", None)
-
-    axis.tick_params(which="major", **options)
-    axis.tick_params(
-        which="minor",
-        length=rc_params.find_all(f"{which}tick.minor.size")[f"{which}tick.minor.size"],
-    )

@@ -31,7 +31,11 @@ dynamic = [ "version" ]
 dependencies = [
   "astropy>=8.0.1,<9",
   "cambium>=0.6",
-  "matplotlib>=3.11.1,<4",
+  "matplotlib>=3,<4",  # basemap puts version constraints on matplotlib
+]
+optional-dependencies.healpix = [
+  # install with `pip install cambium-astro[healpix]` or `poetry install --extras healpix`
+  "basemap>=2; python_version<'3.14'",
   "reproject>=0.21,<0.22",
 ]
 urls.Homepage = "https://www.buildwithcambium.org/"
@@ -46,7 +50,6 @@ dev = [
   "isort>=8.0.1,<9",
   "pre-commit>=4.6,<5",
   "pytest>=9.0.3,<10",
-  "tox>=4.53.1,<5",
 ]
 
 [tool.poetry]
