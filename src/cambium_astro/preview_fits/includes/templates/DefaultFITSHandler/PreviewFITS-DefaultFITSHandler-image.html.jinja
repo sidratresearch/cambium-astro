@@ -1,7 +1,15 @@
-{% macro fits_image(index, hdu, download_info) -%}
+{% macro fits_image(hdu_index, image_index, num_hdu_images, image_path, download_info) -%}
   <img
-    src="{{ hdu['preview_data']['image_path'] }}"
-    alt="Preview of {{ download_info['link'] }} HDU {{ index }}"
+    src="{{ image_path }}"
+    alt="Preview {{ image_index }} of {{ num_hdu_images }} for {{ download_info['link'] }} HDU {{ hdu_index }}"
   />
 {%- endmacro %}
-{{ cambium_wrap(fits_image(index, hdu, download_info), "img") }}
+{% macro hdu_image(hdu, hdu_index, image_index, num_hdu_images, download_info) -%}
+  {% set image_path = hdu["preview_data"]["image_path"][image_index] %}
+  {{ cambium_wrap(fits_image(hdu_index, image_index, num_hdu_images, image_path, download_info), "img") }}
+{%- endmacro %}
+
+{% set num_hdu_images =  hdu["preview_data"]["image_path"]|length %}
+{% for i in range(num_hdu_images) %}
+  {{ hdu_image(hdu, index, i, num_hdu_images, download_info) }}
+{% endfor %}

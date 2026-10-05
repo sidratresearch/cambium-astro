@@ -29,8 +29,8 @@ class CubeSumFITSHandler(dfh.DefaultFITSHandler):
         )
 
     @classmethod
-    def choose_preview_type(cls, hdu_info: SingleHDUInfo) -> str:
-        return "image"
+    def choose_preview_type(cls, hdu_info: SingleHDUInfo) -> dfh.PreviewType:
+        return "image", 1
 
     def flatten_function(self) -> tuple[Callable[[np.ndarray], np.ndarray], str]:
         """Set the function used to flatten a 3D cube into a 2D image."""
@@ -38,8 +38,8 @@ class CubeSumFITSHandler(dfh.DefaultFITSHandler):
         label = "NaN sum"
         return flatten, label
 
-    def make_image(
-        self, path: Path, hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
+    def make_hdu_images(
+        self, paths: list[Path], hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
     ) -> None:
         header = hdu.header.copy()  # make changes to a copy only
 
@@ -53,7 +53,7 @@ class CubeSumFITSHandler(dfh.DefaultFITSHandler):
             cbar_label += f" ({header.get('CUNIT3')})"
         header["BUNIT"] = cbar_label
 
-        dfh._make_basic_image(path, flat_data, header)
+        dfh._make_basic_image(paths[0], flat_data, header)
 
 
 class CubeMaxFITSHandler(CubeSumFITSHandler):

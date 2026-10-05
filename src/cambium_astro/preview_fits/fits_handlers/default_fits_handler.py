@@ -2,6 +2,7 @@
 
 import logging
 import re
+from collections import defaultdict
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, TypedDict
@@ -15,11 +16,11 @@ from jinja2 import Environment
 from matplotlib import pyplot as plt
 
 from ._fits_handler import BaseFITSFileInfo, FITSHandler, SingleHDUInfo, UUIDMapping
-from ._make_healpix_image import HEALPIX_AVAILABLE, _make_healpix_image
+from ._make_healpix_image import HEALPIX_AVAILABLE, _make_healpix_images
 
 logger = logging.getLogger(__name__)
 
-PreviewType = Literal["image", "table", "unavailable"]
+PreviewType = tuple[Literal["image", "table", "unavailable"], int]
 
 
 class DFH_FITSFileInfo(BaseFITSFileInfo):
@@ -27,24 +28,30 @@ class DFH_FITSFileInfo(BaseFITSFileInfo):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.image_uuids_to_filenames: dict[str, str] = {}
-        self.hdu_index_to_image_uuid: dict[int, str] = {}
+        self.image_uuid_to_filename: dict[str, str] = {}
+        self.hdu_index_to_image_uuids: dict[int, list[str]] = defaultdict(list)
         self.hdu_index_to_preview_type: dict[int, PreviewType] = {}
 
     def add_hdu(
         self,
         index: int,
         preview_type: PreviewType,
-        image_uuid: str | None = None,
-        image_filename: str | None = None,
+        image_uuids: str | list[str] | None = None,
+        image_filenames: str | list[str] | None = None,
     ) -> None:
         """Add information about an HDU to this file."""
         self.hdu_index_to_preview_type[index] = preview_type
 
         if preview_type == "image":
-            self.image_uuids_to_filenames[image_uuid] = image_filename
-            self.hdu_index_to_image_uuid[index] = image_uuid
-            self.image_uuids.append(image_uuid)
+            if isinstance(image_uuids, str):
+                image_uuids = [image_uuids]
+            if isinstance(image_filenames, str):
+                image_filenames = [image_filenames]
+
+            for uuid, filename in zip(image_uuids, image_filenames):
+                self.image_uuid_to_filename[uuid] = filename
+                self.hdu_index_to_image_uuids[index].append(uuid)
+                self.image_uuids.append(uuid)
 
 
 class _JinjaHDUInfo(TypedDict):
@@ -110,20 +117,21 @@ class DefaultFITSHandler(FITSHandler):
         # look through each HDU, store the method by which we want to preview it,
         for single_hdu in hdu_info:
             index = single_hdu.index
-            preview_type = self.choose_preview_type(single_hdu)
+            preview_type, num_new_leaves = self.choose_preview_type(single_hdu)
 
             # and create a new leaf for a preview image if necessary
-            image_uuid, image_filename = None, None
+            image_uuids, image_filenames = [], []
             if preview_type == "image":
-                image_filename = make_image_filename(
-                    fits_path, single_hdu, image_extension
-                )
-                image_uuid = add_leaf(fits_path / image_filename)
+                for i in range(num_new_leaves):
+                    image_filenames.append(
+                        make_image_filename(fits_path, single_hdu, image_extension, i)
+                    )
+                    image_uuids.append(add_leaf(fits_path / image_filenames[-1]))
 
-            file_info.add_hdu(index, preview_type, image_uuid, image_filename)
+            file_info.add_hdu(index, preview_type, image_uuids, image_filenames)
 
         # return all of the UUIDs associated with this fits file
-        uuid_mapping = dict.fromkeys(file_info.image_uuids_to_filenames)
+        uuid_mapping = dict.fromkeys(file_info.image_uuid_to_filename)
         uuid_mapping.update({preview_page_uuid: None, fits_file_uuid: file_info})
 
         return uuid_mapping
@@ -187,16 +195,20 @@ class DefaultFITSHandler(FITSHandler):
                 )
 
             case "image":
-                image_uuid = fits_info.hdu_index_to_image_uuid[index]
-                self.make_image(
-                    abs_leaf_path(tree, image_uuid),
+                image_uuids = fits_info.hdu_index_to_image_uuids[index]
+                image_paths = [abs_leaf_path(tree, uuid) for uuid in image_uuids]
+                self.make_hdu_images(
+                    image_paths,
                     hdu,
                     initial_path=fits_info.initial_fits_path,
                 )
 
                 jinja_preview_data = {
-                    "image_path": fits_info.image_uuids_to_filenames[image_uuid]
+                    "image_path": [
+                        fits_info.image_uuid_to_filename[uuid] for uuid in image_uuids
+                    ]
                 }
+
                 jinja_preview_template = (
                     "PreviewFITS-DefaultFITSHandler-image.html.jinja"
                 )
@@ -215,27 +227,27 @@ class DefaultFITSHandler(FITSHandler):
             preview_data=jinja_preview_data,
         )
 
-    def make_image(
-        self, path: Path, hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
+    def make_hdu_images(
+        self, paths: list[Path], hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
     ) -> None:
-        """Make a preview image with matplotlib.
+        """Make preview image(s) with matplotlib.
 
-        Accounts for HEALPix where relevant.
+        Accounts for HEALPix where relevant+available.
         """
         header, data = hdu.header, hdu.data
         if header.get("XTENSION") == "BINTABLE" and header.get("PIXTYPE") == "HEALPIX":
-            _make_healpix_image(path, hdu, initial_path)
+            _make_healpix_images(paths, hdu, initial_path)
             return
 
         if header.get("NAXIS") == 1:
-            _make_line_plot(path, data, header)
+            _make_line_plot(paths[0], data, header)
             return
 
         if header.get("NAXIS") == 2:
-            _make_basic_image(path, data, header)
+            _make_basic_image(paths[0], data, header)
             return
 
-        raise RuntimeError(f"Unclear how to make preview image {path}")
+        raise RuntimeError(f"Unclear how to make preview image {paths}")
 
     @classmethod
     def choose_preview_type(
@@ -252,8 +264,8 @@ class DefaultFITSHandler(FITSHandler):
         ):
             if HEALPIX_AVAILABLE:
                 # TODO: should also check anything else that might make generating an image impossible - npix
-                return "image"
-            return "table"
+                return ("image", header.get("TFIELDS"))
+            return ("table", 0)
 
         if (  # regular images (also gets CompImageHDU)
             issubclass(hdu_classref, (fits.PrimaryHDU, fits.ImageHDU))
@@ -261,25 +273,26 @@ class DefaultFITSHandler(FITSHandler):
             and header.get("NAXIS1", default=0) > 0
             and header.get("NAXIS2", default=0) > 0
         ):
-            return "image"
+            return ("image", 1)
 
         if (  # tables
             issubclass(hdu_classref, (fits.BinTableHDU, fits.TableHDU))
             and header.get("NAXIS2", default=0) > 0
         ):
-            return "table"
+            return ("table", 0)
 
-        return "unavailable"
+        return ("unavailable", 0)
 
 
 def make_image_filename(
-    fits_path: Path, hdu_info: SingleHDUInfo, image_extension: str
+    fits_path: Path, hdu_info: SingleHDUInfo, image_extension: str, index: int
 ) -> str:
     """Make up a filename in which to put an image made from one HDU of a FITS file."""
     image_name_parts = [
         fits_path.stem,
         f"HDU{hdu_info.index}",
         hdu_info.hdu_class.__name__,
+        f"{index}",
     ]
 
     hdu_name = hdu_info.header.get("EXTNAME")

@@ -20,8 +20,10 @@ except ImportError:
     )
 
 
-def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -> None:
-    n_images = hdu.header["TFIELDS"]
+def _make_healpix_images(
+    paths: list[Path], hdu: fits.BinTableHDU, initial_path: Path
+) -> None:
+    n_images = len(paths)
 
     target_header = fits.Header(
         {
@@ -48,16 +50,11 @@ def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -
             f"Assuming galactic coordinates for HEALPix file {initial_path} without COORDSYS keyword"
         )
 
-    fig, axs = plt.subplots(
-        nrows=n_images,
-    )
-    if n_images == 1:
-        axs = [axs]
-
     for i in range(n_images):
+        fig, ax = plt.subplots()
 
         image_data, _ = reproject_from_healpix(hdu, target_header, field=i)
-        m = Basemap(projection="moll", lon_0=0, celestial=True, ax=axs[i])
+        m = Basemap(projection="moll", lon_0=0, celestial=True, ax=ax)
 
         im_min, im_max = np.nanpercentile(image_data, [1, 99])
         m.imshow(image_data, vmin=im_min, vmax=im_max)
@@ -76,5 +73,5 @@ def _make_healpix_image(path: Path, hdu: fits.BinTableHDU, initial_path: Path) -
         )
         cbar.minorticks_off()  # override generic yaxis settings
 
-    fig.savefig(path)
-    plt.close(fig)
+        fig.savefig(paths[i])
+        plt.close(fig)
