@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from astropy.io import fits
@@ -40,7 +41,7 @@ class CubeSumFITSHandler(dfh.DefaultFITSHandler):
 
     def make_hdu_images(
         self, paths: list[Path], hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
-    ) -> None:
+    ) -> list[dict[str, Any]]:
         header = hdu.header.copy()  # make changes to a copy only
 
         flatten, description = self.flatten_function()
@@ -54,6 +55,8 @@ class CubeSumFITSHandler(dfh.DefaultFITSHandler):
         header["BUNIT"] = cbar_label
 
         dfh._make_basic_image(paths[0], flat_data, header)
+
+        return [self.get_image_statistics(hdu.data)]
 
 
 class CubeMaxFITSHandler(CubeSumFITSHandler):

@@ -184,7 +184,7 @@ class DefaultFITSHandler(FITSHandler):
         fits_info: DFH_FITSFileInfo,
         tree: TreeSpan,
     ) -> _JinjaHDUInfo:
-        """Extract the Jinja preview info for an HDU, and create an image if necessary."""
+        """Extract Jinja preview info for an HDU, and create an image if necessary."""
         header, data = hdu.header, hdu.data
 
         match fits_info.hdu_index_to_preview_type[index]:
@@ -197,16 +197,17 @@ class DefaultFITSHandler(FITSHandler):
             case "image":
                 image_uuids = fits_info.hdu_index_to_image_uuids[index]
                 image_paths = [abs_leaf_path(tree, uuid) for uuid in image_uuids]
-                self.make_hdu_images(
+                image_statistics = self.make_hdu_images(
                     image_paths,
                     hdu,
                     initial_path=fits_info.initial_fits_path,
                 )
 
                 jinja_preview_data = {
-                    "image_path": [
+                    "image_paths": [
                         fits_info.image_uuid_to_filename[uuid] for uuid in image_uuids
-                    ]
+                    ],
+                    "image_statistics": image_statistics,
                 }
 
                 jinja_preview_template = (
@@ -229,29 +230,42 @@ class DefaultFITSHandler(FITSHandler):
 
     def make_hdu_images(
         self, paths: list[Path], hdu: fits.ImageHDU | fits.TableHDU, initial_path: Path
-    ) -> None:
+    ) -> list[dict[str, Any]]:
         """Make preview image(s) with matplotlib.
 
         Accounts for HEALPix where relevant+available.
         """
         header, data = hdu.header, hdu.data
         if header.get("XTENSION") == "BINTABLE" and header.get("PIXTYPE") == "HEALPIX":
+            # if HEALPix is not available, the HDU has a table preview type, not image
             _make_healpix_images(paths, hdu, initial_path)
-            return
+            return [
+                self.get_image_statistics(data.columns[i].array)
+                for i in range(header.get("TFIELDS"))
+            ]
 
         if header.get("NAXIS") == 1:
             _make_line_plot(paths[0], data, header)
-            return
+            return [self.get_image_statistics(data)]
 
         if header.get("NAXIS") == 2:
             _make_basic_image(paths[0], data, header)
-            return
+            return [self.get_image_statistics(data)]
 
         raise RuntimeError(f"Unclear how to make preview image {paths}")
 
     @classmethod
+    def get_image_statistics(cls, data: np.ndarray) -> dict[str, Any]:
+        """Make a dictionary of statistics to display alongside an image."""
+        return {
+            "nanmin": np.nanmin(data),
+            "nanmax": np.nanmax(data),
+            "size": data.size,
+            "nan_count": np.sum(np.isnan(data)),
+        }
+
+    @staticmethod
     def choose_preview_type(
-        cls,
         hdu_info: SingleHDUInfo,
     ) -> PreviewType:
         """Inspect an HDU to determine in what way the preview should be displayed."""

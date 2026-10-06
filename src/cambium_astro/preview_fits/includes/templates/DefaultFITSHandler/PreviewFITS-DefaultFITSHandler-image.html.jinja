@@ -4,12 +4,41 @@
     alt="Preview {{ image_index }} of {{ num_hdu_images }} for {{ download_info['link'] }} HDU {{ hdu_index }}"
   />
 {%- endmacro %}
-{% macro hdu_image(hdu, hdu_index, image_index, num_hdu_images, download_info) -%}
-  {% set image_path = hdu["preview_data"]["image_path"][image_index] %}
-  {{ cambium_wrap(fits_image(hdu_index, image_index, num_hdu_images, image_path, download_info), "img") }}
+
+{% macro stats_table(statistics) -%}
+  <table>
+    <caption>
+      Statistics
+    </caption>
+    <thead>
+      <tr>
+        <th>Minimum value</th>
+        <th>Maximum value</th>
+        <th>Total number of data points</th>
+        <th>Number of NaNs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ statistics.nanmin }}</td>
+        <td>{{ statistics.nanmax }}</td>
+        <td>{{ statistics.size }}</td>
+        <td>{{ statistics.nan_count }}</td>
+      </tr>
+    </tbody>
+  </table>
 {%- endmacro %}
 
-{% set num_hdu_images =  hdu["preview_data"]["image_path"]|length %}
+{% macro hdu_image(hdu, hdu_index, image_index, num_hdu_images, download_info) -%}
+  {% set image_path = hdu["preview_data"]["image_paths"][image_index] %}
+  {{ cambium_wrap(fits_image(hdu_index, image_index, num_hdu_images, image_path, download_info), "img") }}
+
+  {% if hdu["preview_data"].image_statistics is defined and hdu["preview_data"].image_statistics != None %}
+    {{ cambium_wrap(stats_table(hdu["preview_data"].image_statistics[image_index]), "table") }}
+  {% endif %}
+{%- endmacro %}
+
+{% set num_hdu_images =  hdu["preview_data"]["image_paths"]|length %}
 {% for i in range(num_hdu_images) %}
   {{ hdu_image(hdu, index, i, num_hdu_images, download_info) }}
 {% endfor %}
