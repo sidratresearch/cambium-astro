@@ -82,7 +82,11 @@ Others are meant to be imported and used in other files
 
 {% macro download_link(download_info) -%}
   {# Link to download the FITS file. Includes a download icon and the filesize. #}
-  <a href="./{{ download_info["link"] }}" class="cambium-PreviewFITS-download-link">
+  <a
+    href="./{{ download_info["link"] }}"
+    class="cambium-PreviewFITS-download-link"
+    download="{{ download_info["link"] }}"
+  >
     Download ({{ download_info["size"]|filesizeformat }}) {% include "icon-download.html.jinja" %}
   </a>
 {%- endmacro %}
