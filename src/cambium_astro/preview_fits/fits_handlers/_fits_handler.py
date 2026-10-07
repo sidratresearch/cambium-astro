@@ -76,10 +76,9 @@ class FITSHandler(ABC):
         """
         return
 
-    @classmethod
     @abstractmethod
     def make_uuid_mapping(
-        cls,
+        self,
         preview_page_uuid: str,
         hdu_info: list[SingleHDUInfo],
         fits_path: Path,

@@ -29,8 +29,7 @@ class CubeSumFITSHandler(dfh.DefaultFITSHandler):
             and hdus[0].header.get("GROUPS", "F") == "F"
         )
 
-    @classmethod
-    def choose_preview_type(cls, hdu_info: SingleHDUInfo) -> dfh.PreviewType:
+    def choose_preview_type(self, hdu_info: SingleHDUInfo) -> dfh.PreviewType:
         return "image", 1
 
     def flatten_function(self) -> tuple[Callable[[np.ndarray], np.ndarray], str]:

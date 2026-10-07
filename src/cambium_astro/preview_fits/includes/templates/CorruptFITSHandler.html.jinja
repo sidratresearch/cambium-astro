@@ -1,0 +1,10 @@
+{% from "PreviewFITS-macros.html.jinja" import  download_link %}
+
+<div class="cambium-PreviewFITS">
+  <h1>{{ download_info["link"] }}</h1>
+
+  <div class="cambium-PreviewFITS-summary">
+    <p>{{ download_link(download_info) }}</p>
+    <p>File could not be opened for previewing.</p>
+  </div>
+</div>

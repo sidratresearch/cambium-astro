@@ -2,11 +2,10 @@
 
 import logging
 from pathlib import Path
-from typing import Any
 
 import matplotlib as mpl
 from astropy.io import fits
-from cambium.stage import Stage, StageConfig
+from cambium.stage import Stage, StageConfig, StageFileConfig
 from cambium.tree import TreeSpan
 from cambium.utils.other_utils import get_all_subclasses, make_jinja_environment
 from cambium.utils.path_utils import (
@@ -17,7 +16,13 @@ from cambium.utils.path_utils import (
 )
 from pydantic import PositiveInt
 
-from .fits_handlers import DefaultFITSHandler, FITSHandler, SingleHDUInfo, UUIDMapping
+from .fits_handlers import (
+    CorruptFITSHandler,
+    DefaultFITSHandler,
+    FITSHandler,
+    SingleHDUInfo,
+    UUIDMapping,
+)
 
 logger = logging.getLogger(__name__)
 FITS_FILE_EXTENSIONS = ["fits", "fit"]
@@ -45,7 +50,7 @@ def _fits_path_updater(fits_path: Path) -> Path:
 
 
 class PreviewFITS(Stage):
-    def __init__(self, config_dict: dict[str, Any]) -> None:
+    def __init__(self, config_dict: StageFileConfig) -> None:
         # Cambium stage management
         self.requires = []
         self.runs_before = ["TransformMarkdown", "IdentifyMetadata"]
@@ -71,6 +76,7 @@ class PreviewFITS(Stage):
             else:
                 raise RuntimeError(f"Unknown FITS handler {handler_name}")
         self.fits_handlers["DefaultFITSHandler"] = DefaultFITSHandler()
+        self.fits_handlers["CorruptFITSHandler"] = CorruptFITSHandler()
 
         self.full_uuid_mapping: UUIDMapping = {}
 
@@ -106,6 +112,10 @@ class PreviewFITS(Stage):
         self, preview_page_uuid: str, fits_path: Path, tree: TreeSpan
     ) -> None:
         hdu_info = []
+        add_leaf = lambda path: self.add_leaf(path, tree)
+        handler_name = None
+
+        # if the file can't be opened/verified, use Corrupt
         try:
             with fits.open(fits_path) as hdu_list:
                 hdu_list.verify("exception")
@@ -115,30 +125,35 @@ class PreviewFITS(Stage):
                     )
         except (OSError, fits.VerifyError) as e:
             logger.warning(f"{fits_path} could not be opened for previewing: {e}")
-            # TODO: send this to a "File could not be opened" handler?
-            return
+            handler_name = "CorruptFITSHandler"
 
-        add_leaf = lambda path: self.add_leaf(path, tree)
+        # if not Corrupt, try all the requested handlers, ends with Default
+        if handler_name is None:
+            for name, instance in self.fits_handlers.items():
+                try:
+                    matches = instance.__class__.matches_file(hdu_info)
+                except Exception as e:
+                    logger.warning(
+                        f"Error while checking if preview for {fits_path} should be handled by {name}. {e}"
+                    )
+                    continue
+                if matches:
+                    handler_name = name
+                    break
 
-        for handler_instance in self.fits_handlers.values():
-            try:
-                matches = handler_instance.__class__.matches_file(hdu_info)
-            except Exception as e:
-                h_name = handler_instance.__class__.__name__
-                logger.warning(
-                    f"Error while checking if preview for {fits_path} should be handled by {h_name}. {e}"
-                )
-                continue
-            if matches:
-                uuid_mapping = handler_instance.make_uuid_mapping(
-                    preview_page_uuid,
-                    hdu_info,
-                    fits_path,
-                    add_leaf,
-                    self.config.image_filetype,
-                )
-                break
+        # Ensure *some* handler is assigned
+        if handler_name is None:
+            # should never happen, maybe we got all the way to Default, which errored?
+            handler_name = "CorruptFITSHandler"
 
+        # register the new leaves
+        uuid_mapping = self.fits_handlers[handler_name].make_uuid_mapping(
+            preview_page_uuid,
+            hdu_info,
+            fits_path,
+            add_leaf,
+            self.config.image_filetype,
+        )
         tree.update_leaf_path(preview_page_uuid, "final", _fits_path_updater)
         tree.update_leaf_path(preview_page_uuid, "latest", _fits_path_updater)
         for uuid in uuid_mapping:

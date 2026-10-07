@@ -254,8 +254,7 @@ class DefaultFITSHandler(FITSHandler):
 
         raise RuntimeError(f"Unclear how to make preview image {paths}")
 
-    @classmethod
-    def get_image_statistics(cls, data: np.ndarray) -> dict[str, Any]:
+    def get_image_statistics(self, data: np.ndarray) -> dict[str, Any]:
         """Make a dictionary of statistics to display alongside an image."""
         return {
             "nanmin": np.nanmin(data),
