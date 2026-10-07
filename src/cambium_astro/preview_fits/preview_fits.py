@@ -26,11 +26,12 @@ from .fits_handlers import (
 
 logger = logging.getLogger(__name__)
 FITS_FILE_EXTENSIONS = ["fits", "fit"]
-ARCHIVE_FILE_EXTENSIONS = ["gz", "zip", "bz2", "xz"]
+ARCHIVE_FILE_EXTENSIONS = ["gz", "zip", "bz2", "xz", "z"]
 
 DEFAULT_ENABLE_PATHS = [f"*.{f}" for f in FITS_FILE_EXTENSIONS] + [
     f"*.{f}.{a}" for f in FITS_FILE_EXTENSIONS for a in ARCHIVE_FILE_EXTENSIONS
 ]
+DEFAULT_ENABLE_PATTERNS = sort_user_paths(DEFAULT_ENABLE_PATHS)
 
 
 class PreviewFITSConfig(StageConfig):

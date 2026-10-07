@@ -4,10 +4,43 @@ import logging
 
 from cambium.macros.macro_utils import Macro, MacroArgs, MacroKwargs
 from cambium.tree import TreeSpan
+from cambium.utils.other_utils import make_jinja_environment
+from cambium.utils.path_utils import path_matches_patterns
 
-from .preview_fits.preview_fits import DEFAULT_ENABLE_PATHS
+from .preview_fits.preview_fits import DEFAULT_ENABLE_PATTERNS
 
 logger = logging.getLogger(__name__)
+
+
+ListFITSFiles_template = """
+{% macro preview_link(filename, preview_href) -%}
+  <a href="{{ preview_href }}" aria-label="Preview {{ filename }}">{{ filename }}</a>
+{%- endmacro %}
+{% macro download_link(filename, download_href) -%}
+  <a
+      href="{{ download_href }}"
+      download="{{ filename }}"
+      aria-label="Download {{ filename }}"
+  >
+      {% include "icon-download.html.jinja" %}
+  </a>
+{%- endmacro %}
+
+<table>
+  <tbody>
+    {% for filename, preview_href, download_href in files %}
+      <tr>
+        {% if preview_href == None %}
+          <td align="left">{{ filename }} (no preview available)</td>
+        {% else %}
+          <td align="left">{{ preview_link(filename, preview_href) }}</td>
+        {% endif %}
+        <td>{{ download_link(filename, download_href) }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+"""
 
 
 class ListFITSFiles(Macro):
@@ -42,7 +75,7 @@ class ListFITSFiles(Macro):
             final_path = tree.leaves["final_path"][uuid]
 
             # limit to preview leaves, and fits files without previews
-            if f"*{initial_path.suffix}" not in DEFAULT_ENABLE_PATHS:
+            if not path_matches_patterns(initial_path, DEFAULT_ENABLE_PATTERNS):
                 continue
 
             # only check files in the current directory
@@ -59,35 +92,29 @@ class ListFITSFiles(Macro):
             if filename.parts[0] == ".cambium":
                 continue
 
-            is_preview = final_path.suffix == ".html"
+            # set default links
+            preview_href, download_href = None, filename
 
-            # get the preview cell and the link for the download cell
-            if is_preview:
+            # update links if we have a preview page
+            if final_path.suffix == ".html":
                 download_href = (
                     filename / filename.name
                 )  # relies on FITSHandlers keeping this consistent
                 preview_href = final_path.relative_to(directory)
-                if subdirectory is not None:
-                    preview_href = subdirectory / preview_href
-                preview_link = f'<a href="./{preview_href}">{filename}</a>'
-            else:
-                download_href = filename
-                preview_link = f"{filename} (no preview available)"
 
-            # make the download cell
+            # update links if file is in a subdir
             if subdirectory is not None:
                 download_href = subdirectory / download_href
-            download_link = f'<a href="./{download_href}">direct download</a>'
+                if preview_href is not None:
+                    preview_href = subdirectory / preview_href
 
-            row = "".join(
-                f'<td align="left">{cell}</td>'
-                for cell in (preview_link, download_link)
-            )
-            rows.append(f"<tr>{row}</tr>")
+            rows.append([filename, preview_href, download_href])
+
+        rows.sort(key=lambda row: row[0])  # sort by name
+
+        jinja_environment = make_jinja_environment(tree)
+        jinja_template = jinja_environment.from_string(ListFITSFiles_template)
 
         from cambium.utils.md_html_utils import wrap_with_div
 
-        return wrap_with_div(
-            ("<table><tbody>" + "".join(rows) + "</tbody></table>"),
-            "table",
-        )
+        return wrap_with_div(jinja_template.render(files=rows), "table")
