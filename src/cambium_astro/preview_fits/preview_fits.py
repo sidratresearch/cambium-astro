@@ -113,8 +113,13 @@ class PreviewFITS(Stage):
         self, preview_page_uuid: str, fits_path: Path, tree: TreeSpan
     ) -> None:
         hdu_info = []
-        add_leaf = lambda path: self.add_leaf(path, tree)
         handler_name = None
+
+        # handle root directory which isn't the current directory
+        fits_path = tree.root_directory / fits_path
+        add_leaf = lambda path: self.add_leaf(
+            path.absolute().relative_to(tree.root_directory.absolute()), tree
+        )
 
         # if the file can't be opened/verified, use Corrupt
         try:
