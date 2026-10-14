@@ -40,6 +40,8 @@ class PreviewFITSConfig(StageConfig):
     image_filetype: str = "png"
     max_preview_rows: PositiveInt | None = 10
     mplstyle_path: Path | None = None
+    """Path to an mplstyle file to apply in addition to the base style. Path
+    should be relative to the root directory."""
     FITS_handlers: list[str] = [
         "CubeSumFITSHandler",
         "ReversedFITSHandler",
@@ -63,8 +65,10 @@ class PreviewFITS(Stage):
         self.disable_patterns = sort_user_paths(self.config.disable_paths)
 
         # other long-term storage
-        self.css_file = "css/preview_fits.css"
         # path from includes/static to the CSS file we want to import on preview pages
+        self.css_file = "css/preview_fits.css"
+
+        # matplotlib style files
         self.style_directory = Path(__file__).parent / "mplstyle"
         self.mpl_style_paths = [self.style_directory / "maple.mplstyle"]
 
@@ -175,6 +179,10 @@ class PreviewFITS(Stage):
         font_files = mpl.font_manager.findSystemFonts(fontpaths=font_directories)
         for font_file in font_files:
             mpl.font_manager.fontManager.addfont(font_file)
+        logger.debug(
+            "Available Matplotlib fonts: "
+            + ", ".join(sorted(mpl.font_manager.get_font_names()))
+        )
 
         # load style files
         if self.config.mplstyle_path is not None:
@@ -184,6 +192,10 @@ class PreviewFITS(Stage):
                     f"Matplotlib style file `{self.config.mplstyle_path}` not found in {tree.root_directory.absolute()}"
                 )
             self.mpl_style_paths.append(style_path)
+        logger.debug(
+            "Using Matplotlib style files: "
+            + ", ".join(str(p) for p in self.mpl_style_paths)
+        )
         mpl.pyplot.style.use(self.mpl_style_paths)
 
     # --------------------------------------------------------------------#
