@@ -13,6 +13,7 @@ div.cambium-PreviewFITS {
   }
 
   div.cambium-PreviewFITS-summary {
+    /* Starting section w/ TOC */
     h2 {
       font-size: 1em;
       border-top-color: var(--cw-primary-colour);
@@ -63,11 +64,25 @@ div.cambium-PreviewFITS {
 
     div.cambium-img-holder {
       background-color: var(--cambium-background-colour-light);
+      padding: 1rem;
+      display: flex;
+      justify-content: center;
+      img {
+        max-height: 80vh;
+        width: auto;
+        max-width: 100%;
+      }
     }
 
     div.cambium-table-holder {
       max-height: 80vh;
       overflow-y: auto;
+
+      table td {
+        /* These two ensure long text cells wrap within the cell */
+        text-wrap-mode: nowrap;
+        white-space-collapse: break-spaces;
+      }
     }
   }
 }

@@ -319,20 +319,57 @@ def make_image_filename(
 
 def _make_basic_image(path: Path, image_data: np.ndarray, header: fits.Header) -> None:
     """Display a colourmapped array with pixel coordinates."""
-    # fig, ax = plt.subplots()
-    fig = plt.figure()
-    ax = fig.add_axes((0.1, 0.1, 0.8, 0.8))
+
+    image_aspect = image_data.shape[1] / image_data.shape[0]  # width / height
+    if image_aspect < 0.75:
+        # tall images
+        figsize = (6, 8)
+        cbar_ax_ypad = 0.05
+        cbar_ax_height = 0.015
+        im_ax_height = 0.4
+    elif image_aspect < 1.25:
+        # square images
+        figsize = (6, 6.5)
+        cbar_ax_ypad = 0.05
+        cbar_ax_height = 0.015
+        im_ax_height = 0.5
+    else:
+        # wide images
+        figsize = (6, 4)
+        cbar_ax_ypad = 0.1
+        cbar_ax_height = 0.025
+        im_ax_height = 0.7
+
+    fig = plt.figure(figsize=figsize)
+
+    im_ax_pad = 0.05
+    im_ax = fig.add_axes(
+        (im_ax_pad, 1 - im_ax_height - im_ax_pad, 1 - 2 * im_ax_pad, im_ax_height)
+    )
     im_min, im_max = np.nanpercentile(image_data, [1, 99])
-    im = ax.imshow(image_data, vmin=im_min, vmax=im_max)
+    im = im_ax.imshow(image_data, vmin=im_min, vmax=im_max)
+    im_bbox = im_ax.get_position()
+
+    cbar_ax_xpad = 0.01
+    cbar_ax = fig.add_axes(
+        (
+            im_bbox.x0 + cbar_ax_xpad,
+            im_bbox.y0 - cbar_ax_ypad - cbar_ax_height,
+            im_bbox.width - 2 * cbar_ax_xpad,
+            cbar_ax_height,
+        )
+    )
     cbar = fig.colorbar(
         im,
+        cax=cbar_ax,
         label=header.get("BUNIT"),
-        extend="both",
+        extend="both",  # make ends pointy
         location="bottom",
-        shrink=0.8,
-        aspect=30,
     )
     cbar.minorticks_off()  # override generic yaxis settings
+    cbar_fontsize = plt.rcParams["font.size"] - 2
+    cbar_ax.tick_params(axis="x", which="major", length=2, labelsize=cbar_fontsize)
+
     fig.savefig(path)
     plt.close(fig)
 
