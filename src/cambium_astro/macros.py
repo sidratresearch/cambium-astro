@@ -27,6 +27,9 @@ ListFITSFiles_template = """
 {%- endmacro %}
 
 <table>
+  {% if show_subdirectory_name %}
+    <caption>FITS files in <code>{{ subdirectory }}/</code></caption>
+  {% endif %}
   <tbody>
     {% for filename, preview_href, download_href in files %}
       <tr>
@@ -62,6 +65,9 @@ class ListFITSFiles(Macro):
 
         recursive = kwargs.get("recursive", False)
         subdirectory = kwargs.get("subdirectory")
+        show_subdirectory_name = kwargs.get(
+            "show_directory_name", subdirectory is not None
+        )
         initial_path = tree.leaves["initial_path"][leaf_uuid]
 
         directory = initial_path.parent
@@ -117,4 +123,11 @@ class ListFITSFiles(Macro):
 
         from cambium.utils.md_html_utils import wrap_with_div
 
-        return wrap_with_div(jinja_template.render(files=rows), "table")
+        return wrap_with_div(
+            jinja_template.render(
+                files=rows,
+                subdirectory=subdirectory,
+                show_subdirectory_name=show_subdirectory_name,
+            ),
+            "table",
+        )
