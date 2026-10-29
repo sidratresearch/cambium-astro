@@ -1,5 +1,19 @@
 # Astronomy Tools for Cambium
 
+<div>
+    <img src="https://img.shields.io/pypi/status/cambium-astro" alt="Development status: Alpha"/>
+    <img src="https://img.shields.io/pypi/v/cambium-astro" alt="Currently available on PyPI"/>
+    <img src="https://img.shields.io/pypi/pyversions/cambium-astro" alt="List of compatible Python versions"/>
+    <img src="https://img.shields.io/pypi/l/cambium-astro" alt="MIT licensed"/>
+</div>
+<br />
+
+<div>
+    <img src="https://img.shields.io/badge/Cambium-Stage-587054" alt="Cambium Stage"/>
+    <img src="https://img.shields.io/badge/Cambium-Macro-587054" alt="Cambium Macro"/>
+</div>
+<br />
+
 This package provides astronomy-specific tooling for the static site generator [Cambium](https://github.com/sidratresearch/cambium).
 
 > [!WARNING]

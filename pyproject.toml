@@ -17,7 +17,7 @@ authors = [
 ]
 requires-python = ">=3.11,<4.0"
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
@@ -30,7 +30,7 @@ classifiers = [
 dynamic = [ "version" ]
 dependencies = [
   "astropy>=8.0.1,<9",
-  "cambium>=0.6",
+  "cambium>=1",
   "matplotlib>=3,<4",  # basemap puts version constraints on matplotlib
 ]
 optional-dependencies.healpix = [
