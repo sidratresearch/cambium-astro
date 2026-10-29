@@ -3288,4 +3288,4 @@ healpix = ["basemap", "reproject"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "9c73a9cea47c9a392a14459c2e381ba0cc471c6b581584692cd760aadca7c3a5"
+content-hash = "7ab5438b6077a00b985d39a1549da0c710f9b52374929c605d50cbc9bf7db64e"
